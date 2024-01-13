@@ -38,3 +38,15 @@ within listing-card:
         - RECENCY: <div class="listing-recency"><i class="pgicon pgicon-clock-o"></i>11m</div>
 - listing subtitles/headline: <div class="headline"> text within this div
 - agent deets: <div class="agent-name">
+
+Note, need pip install brotli: https://stackoverflow.com/questions/49702214/python-requests-response-encoded-in-utf-8-but-cannot-be-decoded 
+
+The problem is this line in your request headers:
+
+"accept-encoding": "gzip, deflate, br",
+That br requests Brotli compression, a new-ish compression standard (see RFC 7932) that Google is pushing to replace gzip on the web. Chrome is asking for Brotli because recent versions of Chrome understand it natively. You're asking for Brotli because you copied the headers from Chrome. But requests doesn't understand Brotli natively.
+
+You can pip install brotli and register the decompresser or just call it manually on res.content. But a simpler solution is to just remove the br:
+
+"accept-encoding": "gzip, deflate",
+… and then you should get gzip, which you and requests already know how to handle.

@@ -23,7 +23,7 @@ def delete_files_in_directory(directory_path):
             file_path = os.path.join(directory_path, file_name)
             try:
                 # Check if it is a file (not a directory)
-                if os.path.isfile(file_path):
+                if os.path.isfile(file_path) and not file_name.startswith('.'):
                     # Remove the file
                     os.remove(file_path)
                     print(f"Deleted file: {file_path}")
@@ -93,11 +93,12 @@ def testConn(headers):
         #exit(1)
         
 def getPages(headers):
-    r = requests.get('https://www.propertyguru.com.sg/property-for-sale', headers=headers, verify=False)
+    r = requests.get('https://www.propertyguru.com.sg/property-for-sale',headers=headers, verify = False)
     if r.status_code == 200:
+        
         # Parse the HTML content using BeautifulSoup
         soup = BeautifulSoup(r.text, 'html.parser')
-
+        
         # Find all elements with class 'pagination'
         pagination_elements = soup.find_all(class_='pagination')
         # Extract numbers from the 'pagination' elements and find the maximum value
@@ -181,13 +182,14 @@ if __name__ == "__main__":
     path_to_chrome = f'{config_data["path_to_chrome"]} %s --incognito'
     delete_files_in_directory(dirpath)
     #IS_BOT = int(input("Use bot to get HAR file?: 1/0 for Yes/No"))
-    IS_BOT = 1
-    har_saved = validateSession(IS_BOT)        
+    IS_BOT = 0
+            
     
     if not IS_BOT:
         HAR_SAVED = int(input("Have you saved the HAR file in this directory? -- 1/0 for Yes/No: "))
     
     else:
+        har_saved = validateSession(IS_BOT)
         HAR_SAVED=har_saved
     
     har_dir = f'{config_data["path_to_har"]}/www.propertyguru.com.sg.har'

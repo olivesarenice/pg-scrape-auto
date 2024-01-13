@@ -99,8 +99,9 @@ def main():
     r_df['listing_uptime_days'] = r_df['listing_uptime'].apply(convertUptimeDays)
     r_df['agent_id'] = r_df['agent_id'].astype('Int64')
     r_df['headline'] = r_df['headline'].str.replace('"','')
-    r_df.to_csv(f"{processed_folder}/cleaned/cleaned_{filename}")
-    print(f'...done! Data saved to {processed_folder}/cleaned/cleaned_{filename}')
+    save_path = f"{processed_folder}/cleaned/cleaned_{filename}.zip"
+    r_df.to_csv(save_path,compression={'method': 'zip', 'archive_name': filename},index=False)
+    print(f'...done! Data saved to {save_path}')
 
 if __name__ == "__main__":
     main()

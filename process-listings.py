@@ -9,8 +9,7 @@ from tqdm import tqdm
 import datetime
 import traceback
 
-PATH_TO_HTMLS = input("Path to directory, relative to this main app directory. e.g. data/xx-htmls")
-SAVE_FILE_AS = input("File name WITHOUT the extension. File will be saved as <FILENAME>_df.csv -- OPTIONAL: If empty, will use timestamp of the html files")
+
 
 def parseSummary(html):
     
@@ -140,22 +139,23 @@ def parseDetail(html):
 def processAll(htmldir):    
     page_data_ls = []
     for file in tqdm(os.listdir(htmldir)):
+        #print(file)
         if '.html' in file:
-            with open(htmldir+'//'+file, 'r', encoding='utf-8') as file_data:
+            with open(htmldir+'/'+file, 'r', encoding='utf-8') as file_data:
                 html = file_data.read()
                 
-        page_summary = parseSummary(html)
-        #print(page_summary)
-        page_details = parseDetail(html)
-        #print(page_details)
-        # Merge the 2 page_dfs based on ID
+            page_summary = parseSummary(html)
+            #print(page_summary)
+            page_details = parseDetail(html)
+            #print(page_details)
+            # Merge the 2 page_dfs based on ID
+            
+            #print(page_summary['id'].dtype)
+            #print(page_details['listing_id'].dtype)
+            page_data_compiled = pd.merge(page_summary, page_details, how = 'left', left_on = 'id', right_on ='listing_id')
         
-        #print(page_summary['id'].dtype)
-        #print(page_details['listing_id'].dtype)
-        page_data_compiled = pd.merge(page_summary, page_details, how = 'left', left_on = 'id', right_on ='listing_id')
-       
-        # Compile all pages here.
-        page_data_ls.append(page_data_compiled)
+            # Compile all pages here.
+            page_data_ls.append(page_data_compiled)
         
     final_df = pd.concat(page_data_ls)
     return final_df
@@ -202,12 +202,15 @@ def cleanTable(compiled_df):
     # Re-type
     return clean_df
 
-if SAVE_FILE_AS != '':
-    file_name = SAVE_FILE_AS +'_'
-else:
+if __name__ == '__main__':
+    with open("config.json") as config_file:
+        config_data = json.load(config_file)
+    dirpath = config_data["path_to_data_htmls"]
+
     file_name = datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%S')+ '_'
-
-compiled_df = processAll(PATH_TO_HTMLS)
-clean_df = cleanTable(compiled_df)
-
-clean_df.to_csv('data/processed-df//'+ file_name+'df.csv',index=False) # Save compiled df with timestamp to identify the run.
+    print(f'Reading from: {dirpath}')
+    compiled_df = processAll(dirpath)
+    clean_df = cleanTable(compiled_df)
+    saved_file = 'data/processed-df/'+ file_name+'df.csv'
+    clean_df.to_csv(saved_file,index=False) # Save compiled df with timestamp to identify the run.
+    print(f'Saving table as: {saved_file}')
