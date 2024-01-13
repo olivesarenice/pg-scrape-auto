@@ -77,6 +77,7 @@ def main(path_to_chrome):
     # Load webpage
     webbrowser.get(path_to_chrome).open("https://www.propertyguru.com.sg/property-for-sale/20?")
     sleep(3) # Wait until captcha is done
+    print('Trying to solve captcha...')
     solve_captcha(config_data['path_to_imgs']['captcha_box']) # Click on captcha naturally
     sleep(5) # Wait for captcha to verify
 
