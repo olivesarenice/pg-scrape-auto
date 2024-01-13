@@ -75,6 +75,7 @@ def solve_captcha(target_image_path):
 def main(path_to_chrome):
 
     # Load webpage
+    print('Starting browser...')
     webbrowser.get(path_to_chrome).open("https://www.propertyguru.com.sg/property-for-sale/20?")
     sleep(3) # Wait until captcha is done
     print('Trying to solve captcha...')
