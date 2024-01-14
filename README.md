@@ -63,7 +63,9 @@ Before running `pipeline.bat`, prepare these 2 items:
 
 After setup and config, run `pipeline.bat` and it will automatically scrape and save the clean table into `data/processed-df/cleaned/` with the timestamp as a `.zip` file of ~5MB. 
 
-https://github.com/olivesarenice/pg-scrape-auto/assets/57907886/5aee3356-0194-468d-9975-de1f0cda2f66
+
+https://github.com/olivesarenice/pg-scrape-auto/assets/57907886/3b2e77db-34f8-4594-819e-b2b84956525e
+
 
 # How it works
 
