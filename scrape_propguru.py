@@ -182,7 +182,7 @@ if __name__ == "__main__":
     path_to_chrome = f'{config_data["path_to_chrome"]} %s --incognito'
     delete_files_in_directory(dirpath)
     #IS_BOT = int(input("Use bot to get HAR file?: 1/0 for Yes/No"))
-    IS_BOT = 0
+    IS_BOT = 1
             
     
     if not IS_BOT:
