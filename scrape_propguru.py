@@ -166,9 +166,9 @@ def log_run(dirpath):
         
 if __name__ == "__main__":
  
-    parser = argparse.ArgumentParser(description='Runs the full scrape and download.')
-    parser.add_argument('--test', action='store_true', help='Flag to turn on test mode, limit pages to 25')
-    args = parser.parse_args()
+    #parser = argparse.ArgumentParser(description='Runs the full scrape and download.')
+    #parser.add_argument('--test', action='store_true', help='Flag to turn on test mode, limit pages to 25')
+    #args = parser.parse_args()
     
     with open("config.json") as config_file:
         config_data = json.load(config_file)
@@ -199,7 +199,7 @@ if __name__ == "__main__":
         print(headers)
         testConn(headers)
         TOTAL_PAGES = getPages(headers)
-        if args.test:
+        if config_data['test_run']:
             TOTAL_PAGES = 25
 
         my_list = [i for i in range(1,TOTAL_PAGES+1,1)]

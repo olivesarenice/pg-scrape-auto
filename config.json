@@ -1,5 +1,5 @@
 {
-    "test_run":0,
+    "test_run":1,
     "path_to_chrome":"C:/Program Files/Google/Chrome/Application/chrome.exe",
     "path_to_imgs":{
         "captcha_box":"pyautogui_imgs/target.png",

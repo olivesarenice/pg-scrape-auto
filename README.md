@@ -59,7 +59,11 @@ Before running `pipeline.bat`, prepare these 2 items:
 
     ![config](assets/config_har.png)
 
-You can now run `pipeline.bat` and it will automatically scrape and save the clean table into `data/processed-df/cleaned/` with the timestamp as a `.zip` file of ~5MB. 
+## Usage
+
+After setup and config, run `pipeline.bat` and it will automatically scrape and save the clean table into `data/processed-df/cleaned/` with the timestamp as a `.zip` file of ~5MB. 
+
+![video](assets/2024-01-14%2018-12-45.mkv)
 
 # How it works
 
