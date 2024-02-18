@@ -1,6 +1,7 @@
 *.zip
 *.csv
 *.html
+*.txt
 *venv/
 __pycache__/
 pyautogui_imgs/

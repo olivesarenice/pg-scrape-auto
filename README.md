@@ -59,6 +59,7 @@ Before running `pipeline.bat`, prepare these 2 items:
 
     ![config](assets/config_har.png)
 
+
 ## Usage
 
 After setup and config, run `pipeline.bat` and it will automatically scrape and save the clean table into `data/processed-df/cleaned/` with the timestamp as a `.zip` file of ~5MB. 
@@ -76,6 +77,23 @@ The `.bat` file runs 3 scripts in sequence prioritising the Scrape First, Parse 
     - Uses pyautogui to control your browser and pass the CAPTCHA. Then saves the headers which contain the verified Cloudflare cookies which will let you send `GET` requests unobstructed for up to 30 mins from the initial CAPTCHA.
 
     - Using these headers, send the requests in 8 parallel threads to get all 2000+ listing pages. For each webpage, save the HTML into `data/dl-htmls/`. Takes about 15-20 mins depending on Cloudflare throttling. This downloads about ~500MB of webpages.
+
+    - Rather than running the search on all listings with no filter, this scraper is configured to split the searches into these filters, and execute the scrape for each:
+
+            ENABLED_FILTERS = [HDB_1_2RM,
+                        HDB_3RM,
+                        HDB_4RM,
+                        HDB_5RM,
+                        HDB_EX,
+                        CONDO_APT_EC,
+                        LANDED_ALL]
+
+        Previously I just scraped all listings from the no filter url `https://www.propertyguru.com.sg/property-for-sale/`, but I realised PropGuru does not display the HDB Type for HDB listings. Hence, we have to assign their types based on the listings that appear from a known filter query. Filter params are just URL params and are defined in `filter_url_param_config.py`. For condo and landed, the property types are properly displayed, hence no need for further filtering within condo and within landeds. 
+        
+        You may also configure your own filters by changing the which filters are enabled.
+
+        The fitler used to retrieve each listing is stored in the `scrape_filter_name` column in the final output table.
+    
 
 2. `process-listings.py`
 

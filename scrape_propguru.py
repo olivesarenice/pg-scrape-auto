@@ -11,6 +11,9 @@ import botHAR
 from bs4 import BeautifulSoup
 import argparse
 
+# Local
+import filter_url_param_config
+
 # Configurations
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -64,12 +67,15 @@ def getHeaders(path_to_har):
     with open(path_to_har,'r',encoding="utf8") as har:
         logs = json.loads(har.read())
         entries =  logs['log']['entries']
-    target = 'https://www.propertyguru.com.sg/property-for-sale/20?' 
+    target = 'https://www.propertyguru.com.sg/property-for-sale/20?'
+    target = 'https://www.propertyguru.com.sg/property-for-sale/25?property_type=H&property_type_code[]=1R&property_type_code[]=2A&property_type_code[]=2I&property_type_code[]=2S&property_type_code[]=3A&property_type_code[]=3NG&property_type_code[]=3Am&property_type_code[]=3NGm&property_type_code[]=3I&property_type_code[]=3Im&property_type_code[]=3S&property_type_code[]=3STD&property_type_code[]=3PA&property_type_code[]=4A&property_type_code[]=4PA&property_type_code[]=4NG&property_type_code[]=5A&property_type_code[]=4STD&property_type_code[]=4I&property_type_code[]=4S&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&property_type_code[]=6J&property_type_code[]=EA&property_type_code[]=EM&property_type_code[]=MG&property_type_code[]=TE&search=true' 
     #target = 'https://www.propertyguru.com.sg/property-for-sale/21?property_type=H&property_type_code%5B0%5D=6J&property_type_code%5B1%5D=EA&property_type_code%5B2%5D=EM&search=true'
     for i,entry in enumerate(entries):
         if entry['request']['url'].startswith(target) and entry['request']['method'] == 'GET':
-            print('Valid GET request')
+            print(f'Valid GET request at entry index {i}')
             break
+        else:
+            raise ValueError("ERROR: Could not find header in HAR!")
                 
     headers_raw = entry['request']['headers']
     
@@ -84,6 +90,7 @@ def testConn(headers):
     session = requests.Session()
     print('Test connection:')
     test_url = "https://www.propertyguru.com.sg/property-for-sale/21?"
+    test_url = "https://www.propertyguru.com.sg/property-for-sale/26?property_type=H&property_type_code[]=1R&property_type_code[]=2A&property_type_code[]=2I&property_type_code[]=2S&property_type_code[]=3A&property_type_code[]=3NG&property_type_code[]=3Am&property_type_code[]=3NGm&property_type_code[]=3I&property_type_code[]=3Im&property_type_code[]=3S&property_type_code[]=3STD&property_type_code[]=3PA&property_type_code[]=4A&property_type_code[]=4PA&property_type_code[]=4NG&property_type_code[]=5A&property_type_code[]=4STD&property_type_code[]=4I&property_type_code[]=4S&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&property_type_code[]=6J&property_type_code[]=EA&property_type_code[]=EM&property_type_code[]=MG&property_type_code[]=TE&search=true"
     #test_url = 'https://www.propertyguru.com.sg/property-for-sale/21?property_type=H&property_type_code%5B0%5D=6J&property_type_code%5B1%5D=EA&property_type_code%5B2%5D=EM&search=true'
     resp = session.get(test_url, headers = headers, verify=False)
     if resp.status_code == 200:
@@ -92,8 +99,8 @@ def testConn(headers):
         print('...failed')
         #exit(1)
         
-def getPages(headers):
-    r = requests.get('https://www.propertyguru.com.sg/property-for-sale',headers=headers, verify = False)
+def getPages(headers,filter_url_params):
+    r = requests.get(f'https://www.propertyguru.com.sg/property-for-sale?{filter_url_params}',headers=headers, verify = False)
     if r.status_code == 200:
         
         # Parse the HTML content using BeautifulSoup
@@ -112,6 +119,7 @@ def getPages(headers):
 def truncateHTML(response):
     
     html = response.content
+    #print(response.content)
     # Keep only the var guruApp and the 20 listings per html page
     soup = BeautifulSoup(html, 'html.parser')
     summary_data = soup.find('script', text=lambda x: x and 'var guruApp' in x)
@@ -126,15 +134,19 @@ def truncateHTML(response):
 def process_item(item):
     # This function represents the task you want to perform on each item
     # Modify this function based on your specific requirements
-    n = item
+    name = item["name"]
+    page = item["page"]
+    url = item["url"]
+    #print(url)
     time.sleep(6*random.random())
     session = requests.Session()
-    url = f"https://www.propertyguru.com.sg/property-for-sale/{str(n)}?"
+    #url = f"https://www.propertyguru.com.sg/property-for-sale/{str(n)}?"
     #url = f"https://www.propertyguru.com.sg/property-for-sale/{str(n)}?property_type=H&property_type_code[]=5A&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&search=true"
     response = session.get(url, headers = headers, verify=False)
-    
+    if 'Bot Protection' in response.text:
+        raise ValueError(f"ERROR: Hit bot protection on PAGE <{page}> | URL <{url}>")
     #print(f"Processed item: {item}, Result: {response}")
-    with open(f'{dirpath}/page_{n}.html', 'w', encoding='utf-8') as file:
+    with open(f'{dirpath}/{name}_page_{page}.html', 'w', encoding='utf-8') as file:
         file.write(truncateHTML(response))
         #file.write(response.text)
     return response
@@ -144,25 +156,26 @@ def parallel_process(items, num_workers):
         results = list(tqdm(executor.map(process_item, items), total=len(items)))
         return results
     
-def get_directory_size(directory_path):
+def get_directory_size(directory_path, filter_url_name):
     total_size = 0
 
     for dirpath, dirnames, filenames in os.walk(directory_path):
         for filename in filenames:
-            file_path = os.path.join(dirpath, filename)
-            total_size += os.path.getsize(file_path)
+            if filter_url_name in filename:
+                file_path = os.path.join(dirpath, filename)
+                total_size += os.path.getsize(file_path)
 
     # Convert total_size to kilobytes (optional)
     total_size_mb = total_size / (1024.0*1024)
 
     return total_size_mb
 
-def log_run(dirpath):
-    with open(f'{dirpath}/run_report.txt', 'w', encoding='utf-8') as file:
+def log_run(dirpath, filter_url_name):
+    with open(f'{dirpath}/0_{filter_url_name}_run_report.txt', 'w', encoding='utf-8') as file:
         file.write(f"Start: {start_t} \n")
         file.write(f"End: {datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%S')} \n")
         file.write(f"Pages: {TOTAL_PAGES} \n")
-        file.write(f"Total Size (MB): {get_directory_size(dirpath)}\n")
+        file.write(f"Total Size (MB): {get_directory_size(dirpath,filter_url_name)}\n")
         
 if __name__ == "__main__":
  
@@ -198,16 +211,26 @@ if __name__ == "__main__":
         headers = getHeaders(har_dir)
         print(headers)
         testConn(headers)
-        TOTAL_PAGES = getPages(headers)
-        if config_data['test_run']:
-            TOTAL_PAGES = 25
+        
+        ### Allows specific URL params
+        for filter_url in filter_url_param_config.ENABLED_FILTERS:
+            filter_url_name = filter_url['name']
+            filter_url_params = filter_url['params']
+            TOTAL_PAGES = getPages(headers, filter_url_params)
+            if config_data['test_run']:
+                if TOTAL_PAGES > 25:
+                    TOTAL_PAGES = 25
+            
+            my_list = [i for i in range(1,TOTAL_PAGES+1,1)]
+            
+            base_url = "https://www.propertyguru.com.sg/property-for-sale/"
+            url_list = [{"name":filter_url_name,"page":i,"url": f"{base_url}{i}?{filter_url_params}/"} for i in range(1,TOTAL_PAGES+1,1)]
+            
+            num_parallel_workers = 8
 
-        my_list = [i for i in range(1,TOTAL_PAGES+1,1)]
-        num_parallel_workers = 8
-
-        # Perform parallel processing
-        results = parallel_process(my_list, num_parallel_workers)
-        log_run(dirpath)
+            # Perform parallel processing
+            results = parallel_process(url_list, num_parallel_workers)
+            log_run(dirpath, filter_url_name)
         
     else:
         print('No HAR file, exiting...')

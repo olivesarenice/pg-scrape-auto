@@ -143,7 +143,7 @@ def processAll(htmldir):
         if '.html' in file:
             with open(htmldir+'/'+file, 'r', encoding='utf-8') as file_data:
                 html = file_data.read()
-                
+            filter_name = file.split("_")[0]    
             page_summary = parseSummary(html)
             #print(page_summary)
             page_details = parseDetail(html)
@@ -153,7 +153,7 @@ def processAll(htmldir):
             #print(page_summary['id'].dtype)
             #print(page_details['listing_id'].dtype)
             page_data_compiled = pd.merge(page_summary, page_details, how = 'left', left_on = 'id', right_on ='listing_id')
-        
+            page_data_compiled['scrape_query_filter'] = filter_name
             # Compile all pages here.
             page_data_ls.append(page_data_compiled)
         
@@ -190,7 +190,8 @@ def cleanTable(compiled_df):
                         'headline':'headline',
                         'agent_id':'agent_id',
                         'agent_name':'agent_name',
-                        'agent_link':'agent_link'
+                        'agent_link':'agent_link',
+                        'scrape_query_filter':'scrape_query_filter'
                     }
     
     for k,v in remap_columns.items():
