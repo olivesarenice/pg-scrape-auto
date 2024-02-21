@@ -7,6 +7,6 @@
         "network_focus":"pyautogui_imgs/network2.png",
         "export_har":"pyautogui_imgs/exp_har.png"
     },
-    "path_to_data_htmls":"data/dl-htmls",
+    "path_to_data_htmls":"data/1_dl-htmls",
     "path_to_har":"."
 }

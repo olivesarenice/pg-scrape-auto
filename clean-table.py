@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import glob
 import os
 import argparse
@@ -55,20 +55,21 @@ def getRemainingLease(completed, lease_tenure, timestamp):
 def main():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("--filename", required = False, help="File name in data/processed-df/")
+    parser.add_argument("--filename", required = False, help="File name in data/2_processed-df/")
     args = parser.parse_args()
     print(args)
     filename = args.filename
-    processed_folder = r"data/processed-df/"
+    processed_folder = r"data/2_processed-df/"
     
-    start_time = datetime.utcnow()
+    #start_time = datetime.utcnow()
     if filename == None:
     
         list_of_files = glob.glob(f'{processed_folder}*.csv') # * means all if need specific format then *.csv
         filename = os.path.basename(max(list_of_files, key=os.path.getctime))
         print(f'Using latest file: {filename}')
-        
     
+    start_time_file_name = filename.split("_")[0]    
+    start_time = datetime.strptime(start_time_file_name,"%Y%m%dT%H%M%S")
     r_df = pd.read_csv(f"{processed_folder}{filename}")
         
     r_df['timestamp'] = start_time
@@ -99,7 +100,10 @@ def main():
     r_df['listing_uptime_days'] = r_df['listing_uptime'].apply(convertUptimeDays)
     r_df['agent_id'] = r_df['agent_id'].astype('Int64')
     r_df['headline'] = r_df['headline'].str.replace('"','')
-    save_path = f"{processed_folder}/cleaned/cleaned_{filename}.zip"
+    
+    r_df['date_found'] = start_time.date()
+    r_df['approx_date_listed'] = r_df['listing_uptime_days'].apply(lambda x : (start_time - timedelta(seconds=int(round(x*86400)))).date())
+    save_path = f"data/3_cleaned-zip/cleaned_{filename}.zip"
     r_df.to_csv(save_path,compression={'method': 'zip', 'archive_name': filename},index=False)
     print(f'...done! Data saved to {save_path}')
 

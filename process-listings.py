@@ -212,6 +212,6 @@ if __name__ == '__main__':
     print(f'Reading from: {dirpath}')
     compiled_df = processAll(dirpath)
     clean_df = cleanTable(compiled_df)
-    saved_file = 'data/processed-df/'+ file_name+'df.csv'
+    saved_file = 'data/2_processed-df/'+ file_name+'df.csv'
     clean_df.to_csv(saved_file,index=False) # Save compiled df with timestamp to identify the run.
     print(f'Saving table as: {saved_file}')

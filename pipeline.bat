@@ -15,15 +15,18 @@ python process-listings.py || goto :error
 echo RUN: clean-table.py
 python clean-table.py || goto :error
 
+echo RUN: generate_snapshot.py
+python generate_snapshot.py || goto :error
+
 echo deactivate venv
 deactivate
 
 echo pipeline done.
 
-pause
-goto :eof
-
 :error
 echo An error occurred. Press any key to exit.
 pause
 goto :eof
+
+rem Putting the PC to sleep
+%SystemRoot%\System32\rundll32.exe powrprof.dll,SetSuspendState Sleep

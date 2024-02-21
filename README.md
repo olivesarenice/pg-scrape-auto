@@ -119,3 +119,56 @@ The rest of the script is standard scraping using `requests` and data cleaning u
 
 Needed to install `brotli`. This is already included in `requirements.txt`. See this [SO issue](https://stackoverflow.com/questions/49702214/python-requests-response-encoded-in-utf-8-but-cannot-be-decoded)
 
+
+# Future Developments
+
+The goal is to collect a daily snapshot of all the listings available in PropGuru and use that to trend the market (seller's side) is moving over time.
+
+Motivation: public market data is only available as transactions, which are also usually out of date by at least 2 weeks. If we can view real-time (daily) trends in metrics such as:
+
+- how fast a type of property is selling
+- range of prices for a specific project of a specific size (range)
+
+The only people with this information at the moment are the large portals like PropGuru who do not share their listing data in a format that can be easily analysed.
+
+This will help:
+1. other sellers to properly price their units
+2. other buyers to have an understanding of what a good deal looks like
+
+## System Design
+
+A daily load will be in the range of 40k - 50k listings which amounts to 5MB of compressed storage. Uncompressed, this is about 25MB for 40k rows.
+
+Assuming the average lifetime of a listing is 10 days (based on average uptime of PropGuru listings), this means that on a daily, 1/10 or 10% of the total daily listings will be new (i.e. 5k new listings daily). If we are keeping a running table of all listings since start of scraping, this means the table will gain 5k new listings (rows) a day, or  ~3MB per day. Assuming we keep 3 years of historical data inside the database, this amounts to a maximum table size of 4GB (6M rows) at any given time. 
+
+    D0 = 50k
+    D1 = 55k
+    D2 = 60k
+
+The final table will look like:
+
+| listing_id | first_listed_date | last_listed_date | listing_details |
+| - | - | - | - |
+|100001 | 2024-01-01 | NULL | ... |
+|100002 | 2024-02-01 | NULL | ... | 
+|100003 | 2024-02-03 | 2024-02-05 | ... |
+
+e.g. 100001 and 100002 are still listed as of TODAY. 100003 was taken down in 2 days.
+
+Infrastructure:
+
+1. Local server
+    
+    - have not decided whether to use RPi w/ screen, old laptop, or PC. 
+    - this server will be on 24/7 and runs `pipeline.bat` nightly.
+    - resulting .zip files will be saved locally 
+    - after, run `snapshot.bat` which will run computations and overwrite the results to the google bigquery db AND to local file.
+
+2. BigQuery
+
+    - handle any further data transformations into multiple tables via triggers
+
+3. micro instance OR RPi to host Flask App for public
+
+    - 
+
