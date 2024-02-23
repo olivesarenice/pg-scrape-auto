@@ -23,10 +23,5 @@ deactivate
 
 echo pipeline done.
 
-:error
-echo An error occurred. Press any key to exit.
-pause
-goto :eof
-
 rem Putting the PC to sleep
 %SystemRoot%\System32\rundll32.exe powrprof.dll,SetSuspendState Sleep

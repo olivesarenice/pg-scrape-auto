@@ -137,7 +137,7 @@ def main(path_to_chrome):
 
     pyautogui.moveTo(185,117, 1, pyautogui.easeOutQuad)
     pyautogui.click()
-    
+    sleep(2)
     # Do the export.
     pyautogui.press('enter')
     sleep(1)
