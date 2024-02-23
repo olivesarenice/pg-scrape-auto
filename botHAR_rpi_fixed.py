@@ -79,10 +79,12 @@ def main(path_to_chrome):
     # Load webpage
     print('Starting browser...')
     webbrowser.get(path_to_chrome).open("https://www.propertyguru.com.sg/property-for-sale/25?property_type=H&property_type_code[]=1R&property_type_code[]=2A&property_type_code[]=2I&property_type_code[]=2S&property_type_code[]=3A&property_type_code[]=3NG&property_type_code[]=3Am&property_type_code[]=3NGm&property_type_code[]=3I&property_type_code[]=3Im&property_type_code[]=3S&property_type_code[]=3STD&property_type_code[]=3PA&property_type_code[]=4A&property_type_code[]=4PA&property_type_code[]=4NG&property_type_code[]=5A&property_type_code[]=4STD&property_type_code[]=4I&property_type_code[]=4S&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&property_type_code[]=6J&property_type_code[]=EA&property_type_code[]=EM&property_type_code[]=MG&property_type_code[]=TE&search=true")
-    sleep(3) # Wait until captcha is done
+    sleep(7) # Wait until captcha is done
     print('Trying to solve captcha...')
-    solve_captcha(config_data['path_to_imgs']['captcha_box']) # Click on captcha naturally
-    sleep(5) # Wait for captcha to verify
+    pyautogui.moveTo(95, 275, 2, pyautogui.easeOutQuad)
+    pyautogui.click()
+    #solve_captcha(config_data['path_to_imgs']['captcha_box']) # Click on captcha naturally
+    sleep(7) # Wait for captcha to verify
 
 
     # Open Inspect
@@ -122,15 +124,18 @@ def main(path_to_chrome):
     #     return False
 
     # Export HAR
-    exp_har_location = pyautogui.locateOnScreen(config_data['path_to_imgs']['export_har'])
-    if exp_har_location:
-        pyautogui.click(exp_har_location.left + exp_har_location.width / 2, exp_har_location.top + exp_har_location.height / 2)
-        sleep(2)
+    # exp_har_location = pyautogui.locateOnScreen(config_data['path_to_imgs']['export_har'])
+    # if exp_har_location:
+    #     pyautogui.click(exp_har_location.left + exp_har_location.width / 2, exp_har_location.top + exp_har_location.height / 2)
+    #     sleep(2)
 
-    else:
-        print("Could not find export button")
-        return False
+    # else:
+    #     print("Could not find export button")
+    #     return False
 
+    pyautogui.moveTo(185,117, 1, pyautogui.easeOutQuad)
+    pyautogui.click()
+    
     # Do the export.
     pyautogui.press('enter')
     sleep(1)
