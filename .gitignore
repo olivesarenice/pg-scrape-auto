@@ -5,4 +5,4 @@
 *.parquet
 *venv/
 __pycache__/
-pyautogui_imgs/
+#pyautogui_imgs/
