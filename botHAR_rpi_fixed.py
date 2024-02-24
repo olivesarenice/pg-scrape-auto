@@ -148,6 +148,7 @@ def main(path_to_chrome):
 
     # Close both tabs
     pyautogui.hotkey('ctrl', 'w')
+    sleep(2)
     pyautogui.hotkey('ctrl', 'w')
     sleep(2)
 
