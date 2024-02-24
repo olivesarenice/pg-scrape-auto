@@ -159,8 +159,8 @@ def process_item(item):
         file.write(truncateHTML(response))
         #file.write(response.text)
     w2 = time.time()
-    if page %5 == 0:
-        print(f'{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s')
+    # if page %10 == 0:
+    #     print(f'{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s')
     return None
 
 def parallel_process(items, num_workers):
