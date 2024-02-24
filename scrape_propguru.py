@@ -17,7 +17,7 @@ import filter_url_param_config
 # Configurations
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
+# Functions
 def delete_files_in_directory(directory_path):
     # Check if the directory exists
     if os.path.exists(directory_path) and os.path.isdir(directory_path):
@@ -116,8 +116,9 @@ def getPages(headers,filter_url_params):
             print(f"# pages: {max_number}")       
         return max_number
 
+
+
 def truncateHTML(response):
-    
     html = response.content
     #print(response.content)
     # Keep only the var guruApp and the 20 listings per html page
@@ -138,24 +139,34 @@ def process_item(item):
     page = item["page"]
     url = item["url"]
     #print(url)
-    time.sleep(6*random.random())
+    s1 = time.time()
+    time.sleep(2*random.random())
+    s2 = time.time()
     #session = requests.Session() # DO NOT START A NEW SESSION
     #url = f"https://www.propertyguru.com.sg/property-for-sale/{str(n)}?"
     #url = f"https://www.propertyguru.com.sg/property-for-sale/{str(n)}?property_type=H&property_type_code[]=5A&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&search=true"
     #response = session.get(url, headers = headers, verify=False)
+    g1 = time.time()
     response = requests.get(url, headers = headers, verify=False)
+    g2 = time.time()
+
     if 'Bot Protection' in response.text:
         raise ValueError(f"ERROR: Hit bot protection on PAGE <{page}> | URL <{url}>")
     #print(f"Processed item: {item}, Result: {response}")
+    w1 = time.time()
+
     with open(f'{dirpath}/{name}_page_{page}.html', 'w', encoding='utf-8') as file:
         file.write(truncateHTML(response))
         #file.write(response.text)
-    return response
+    w2 = time.time()
+    if page %5 == 0:
+        print(f'{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s')
+    return None
 
 def parallel_process(items, num_workers):
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        results = list(tqdm(executor.map(process_item, items), total=len(items)))
-        return results
+        tqdm(executor.map(process_item, items), total=len(items))
+        return None
     
 def get_directory_size(directory_path, filter_url_name):
     total_size = 0
@@ -231,7 +242,7 @@ if __name__ == "__main__":
             num_parallel_workers = 4
 
             # Perform parallel processing
-            results = parallel_process(url_list, num_parallel_workers) # TURNED OFF PARALLEL PROCESSING
+            parallel_process(url_list, num_parallel_workers) # TURNED OFF PARALLEL PROCESSING
             
             session = requests.Session()
             # for item in tqdm(url_list):
