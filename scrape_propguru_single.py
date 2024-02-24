@@ -197,7 +197,7 @@ if __name__ == "__main__":
     except FileExistsError as e:
         print(e)
         
-    path_to_chrome = f'{config_data["path_to_chromium-browser"]} %s --incognito'
+    path_to_chrome = f'{config_data["path_to_chromium_browser"]} %s --incognito'
     delete_files_in_directory(dirpath)
     #IS_BOT = int(input("Use bot to get HAR file?: 1/0 for Yes/No"))
 

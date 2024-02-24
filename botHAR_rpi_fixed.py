@@ -155,5 +155,5 @@ def main(path_to_chrome):
 
 if __name__ == '__main__':
 
-    path_to_chrome = f'{config_data["path_to_chrome"]} %s --incognito'
+    path_to_chrome = f'{config_data["path_to_chromium_browser"]} %s --incognito'
     main(path_to_chrome)
