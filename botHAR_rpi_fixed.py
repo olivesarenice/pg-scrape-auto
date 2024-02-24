@@ -81,17 +81,17 @@ def main(path_to_chrome):
     print('Starting browser...')
     #subprocess.run(['/usr/bin/chromium-browser','--no-sandbox', "https://www.propertyguru.com.sg/property-for-sale/25?property_type=H&property_type_code[]=1R&property_type_code[]=2A&property_type_code[]=2I&property_type_code[]=2S&property_type_code[]=3A&property_type_code[]=3NG&property_type_code[]=3Am&property_type_code[]=3NGm&property_type_code[]=3I&property_type_code[]=3Im&property_type_code[]=3S&property_type_code[]=3STD&property_type_code[]=3PA&property_type_code[]=4A&property_type_code[]=4PA&property_type_code[]=4NG&property_type_code[]=5A&property_type_code[]=4STD&property_type_code[]=4I&property_type_code[]=4S&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&property_type_code[]=6J&property_type_code[]=EA&property_type_code[]=EM&property_type_code[]=MG&property_type_code[]=TE&search=true"])
     webbrowser.get(path_to_chrome).open("https://www.propertyguru.com.sg/property-for-sale/25?property_type=H&property_type_code[]=1R&property_type_code[]=2A&property_type_code[]=2I&property_type_code[]=2S&property_type_code[]=3A&property_type_code[]=3NG&property_type_code[]=3Am&property_type_code[]=3NGm&property_type_code[]=3I&property_type_code[]=3Im&property_type_code[]=3S&property_type_code[]=3STD&property_type_code[]=3PA&property_type_code[]=4A&property_type_code[]=4PA&property_type_code[]=4NG&property_type_code[]=5A&property_type_code[]=4STD&property_type_code[]=4I&property_type_code[]=4S&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&property_type_code[]=6J&property_type_code[]=EA&property_type_code[]=EM&property_type_code[]=MG&property_type_code[]=TE&search=true")
-    sleep(7) # Wait until captcha is done
+    sleep(10) # Wait until captcha is done
     print('Trying to solve captcha...')
     pyautogui.moveTo(95, 275, 2, pyautogui.easeOutQuad)
     pyautogui.click()
     #solve_captcha(config_data['path_to_imgs']['captcha_box']) # Click on captcha naturally
-    sleep(7) # Wait for captcha to verify
+    sleep(10) # Wait for captcha to verify
 
 
     # Open Inspect
     pyautogui.hotkey('ctrl', 'shift', 'i')
-    sleep(2)
+    sleep(7)
 
     # Switch back to webpage
     pyautogui.hotkey('alt', 'tab')
@@ -140,11 +140,11 @@ def main(path_to_chrome):
     sleep(2)
     # Do the export.
     pyautogui.press('enter')
-    sleep(1)
+    sleep(3)
     # pyautogui.press('tab')
     # sleep(1)
     pyautogui.press('enter')
-    sleep(3)
+    sleep(10)
 
     # Close both tabs
     pyautogui.hotkey('ctrl', 'w')
