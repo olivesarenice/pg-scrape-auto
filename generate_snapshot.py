@@ -25,8 +25,13 @@ def snapshot_exists():
         return False
 
 def create_updated_snapshot(prev_snapshot_listings: pd.DataFrame, daily_listings: pd.DataFrame) -> pd.DataFrame:
+
+        daily_listings['date_found'] = pd.to_datetime(daily_listings['date_found']).dt.date
+        daily_listings['approx_date_listed'] = pd.to_datetime(daily_listings['approx_date_listed']).dt.date
         daily_listings['latest_date_found'] = daily_listings['date_found']
 
+        print(daily_listings.dtypes)
+        
         new_listings = daily_listings[~daily_listings['id'].isin(prev_snapshot_listings['id'])]
 
         existing_listings = daily_listings[daily_listings['id'].isin(prev_snapshot_listings['id'])]
@@ -41,9 +46,9 @@ def create_updated_snapshot(prev_snapshot_listings: pd.DataFrame, daily_listings
         
         # Union the new_listings to snapshot
         snapshot = pd.concat([snapshot,new_listings], axis = 0)
-        snapshot['latest_date_found'] = pd.to_datetime(snapshot['latest_date_found'])
-        snapshot['date_found'] = pd.to_datetime(snapshot['date_found'])
-        snapshot['listing_alive_days'] = snapshot['latest_date_found'] - snapshot['date_found']
+        snapshot['latest_date_found'] = pd.to_datetime(snapshot['latest_date_found']).dt.date
+        snapshot['date_found'] = pd.to_datetime(snapshot['date_found']).dt.date
+        snapshot['listing_alive_days'] = (snapshot['latest_date_found'] - snapshot['date_found'])/86400000000
         
         return snapshot
 
@@ -53,11 +58,12 @@ if not snapshot_exists(): # Create the file from the oldest cleaned-zip
     
     prev_snapshot_file = get_earliest_file('data/3_cleaned-zip','.zip')
     prev_snapshot_listings = pd.read_csv(prev_snapshot_file)
+    prev_snapshot_listings['approx_date_listed'] = pd.to_datetime(prev_snapshot_listings['approx_date_listed']).dt.date
     prev_snapshot_listings['date_found'] = prev_snapshot_listings['approx_date_listed']
     prev_snapshot_listings['latest_date_found'] = prev_snapshot_listings['approx_date_listed']
-    prev_snapshot_listings['latest_date_found'] = pd.to_datetime(prev_snapshot_listings['latest_date_found'])
-    prev_snapshot_listings['date_found'] = pd.to_datetime(prev_snapshot_listings['date_found'])
-    prev_snapshot_listings['listing_alive_days'] = prev_snapshot_listings['latest_date_found'] - prev_snapshot_listings['date_found']
+    # prev_snapshot_listings['latest_date_found'] = pd.to_datetime(prev_snapshot_listings['latest_date_found'])
+    # prev_snapshot_listings['date_found'] = pd.to_datetime(prev_snapshot_listings['date_found'])
+    prev_snapshot_listings['listing_alive_days'] = (prev_snapshot_listings['latest_date_found'] - prev_snapshot_listings['date_found'])/86400000000
     
     file_date = prev_snapshot_file.split('T')[0].split('cleaned_')[-1]
     prev_snapshot_listings.to_parquet(f'data/4_snapshots/snapshot_{file_date}.parquet')

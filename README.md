@@ -172,3 +172,21 @@ Infrastructure:
 
     - 
 
+Update on notes:....
+
+2024-02-24
+
+Exploring runs with RPi4 4GB with a 3.5" screen. Lots of progress so far.
+
+Obstacles:
+- Small screen means that windows is cut off, have to scale out the browser screen. No major issues here.
+- Have to use chromium-browser instead of Chrome on the RPi. Note that pyautogui must be ran with sudo priv while chromium browser must be ran as non-root user. To get around this, need to build a venv with `sudo virtualenv "sudo-venv"` so that the scripts get executed with sudo but avoiding having to run as root.
+- Slow write speeds for RPi (0.1s on SSD vs. 1s on SD card) means cookies will expire before bot is done, even after lowering the sleep times. As writes are the bottleneck and not the server response, decided to use sequential processing rather than multi-threading. This then allows me to check at each loop that the cookies are still valid, and if not, trigger the re-validation bot. This wouldn't be possible (or needed) for multi-thread SSD where the whole scrape is done in < 30 mins/
+- Was hitting open file limits (ulimit = 1024) due to opening of `Session` per URL but not closing them. Switched to using requests instead, since I realised sessions were not needed once the headers are valid
+- For some reason, there needs to be an existing chrome tab open before the script can trigger webbrowser.get() without incurring some errors.
+- Overall, RPi has its custom scripts for `botHAR_rpi_fixed.py` and `scrap_propguru_single.py`, the subsequent steps are the same
+- Concerns with lifetime of the SD cards considering 1GB of writes per day * 365 days.
+- Considering to migrate the entire OS onto a new 64GB card with Class10 write speeds, possibly get x2.5 writing.
+
+Ideas:
+- Consider implementing more dimensions of property searches --> by home description (LLM) or image vibe (DALL-E) --> how to power this? will need some form of vectorDB 
