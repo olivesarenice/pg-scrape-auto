@@ -1,8 +1,5 @@
 #!/bin/bash
 
-echo "setting file limits"
-ulimit -n 8192 # rpi cannot handle so many files open
-
 echo "cd to pg-scrape-auto"
 cd ~/Projects/pg-scrape-auto  # Replace with the actual path
 

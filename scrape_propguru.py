@@ -131,7 +131,7 @@ def truncateHTML(response):
     combined_soup.append(main_body)
     return combined_soup.prettify()
 
-def process_item(item):
+def process_item(item, session, headers):
     # This function represents the task you want to perform on each item
     # Modify this function based on your specific requirements
     name = item["name"]
@@ -139,7 +139,7 @@ def process_item(item):
     url = item["url"]
     #print(url)
     time.sleep(6*random.random())
-    session = requests.Session()
+    #session = requests.Session() # DO NOT START A NEW SESSION
     #url = f"https://www.propertyguru.com.sg/property-for-sale/{str(n)}?"
     #url = f"https://www.propertyguru.com.sg/property-for-sale/{str(n)}?property_type=H&property_type_code[]=5A&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&search=true"
     response = session.get(url, headers = headers, verify=False)
@@ -227,10 +227,14 @@ if __name__ == "__main__":
             base_url = "https://www.propertyguru.com.sg/property-for-sale/"
             url_list = [{"name":filter_url_name,"page":i,"url": f"{base_url}{i}?{filter_url_params}/"} for i in range(1,TOTAL_PAGES+1,1)]
             
-            num_parallel_workers = 1
+            #num_parallel_workers = 1
 
             # Perform parallel processing
-            results = parallel_process(url_list, num_parallel_workers)
+            #results = parallel_process(url_list, num_parallel_workers) # TURNED OFF PARALLEL PROCESSING
+            
+            session = requests.Session()
+            for item in url_list:
+                process_item(item, session, headers)
             log_run(dirpath, filter_url_name)
         
     else:
