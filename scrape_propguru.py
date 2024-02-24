@@ -202,8 +202,9 @@ if __name__ == "__main__":
         HAR_SAVED = int(input("Have you saved the HAR file in this directory? -- 1/0 for Yes/No: "))
     
     else:
-        har_saved = validateSession(IS_BOT)
-        HAR_SAVED=har_saved
+        #har_saved = validateSession(IS_BOT)
+        #HAR_SAVED=har_saved
+        HAR_SAVED=1
     
     har_dir = f'{config_data["path_to_har"]}/www.propertyguru.com.sg.har'
     

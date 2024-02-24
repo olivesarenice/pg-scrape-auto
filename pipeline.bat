@@ -6,6 +6,9 @@ cd C:\Users\Oliver\Documents\_personal\Coding\git-repos\pg-scrape-auto
 echo activate venv
 call .min_venv\Scripts\activate 
 
+echo RUN: botHAR.py
+python botHAR.py || goto :error
+
 echo RUN: scrape_propguru.py
 python scrape_propguru.py || goto :error
 
