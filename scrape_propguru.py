@@ -227,7 +227,7 @@ if __name__ == "__main__":
             base_url = "https://www.propertyguru.com.sg/property-for-sale/"
             url_list = [{"name":filter_url_name,"page":i,"url": f"{base_url}{i}?{filter_url_params}/"} for i in range(1,TOTAL_PAGES+1,1)]
             
-            num_parallel_workers = 8
+            num_parallel_workers = 1
 
             # Perform parallel processing
             results = parallel_process(url_list, num_parallel_workers)
