@@ -13,10 +13,30 @@ from bs4 import BeautifulSoup
 import argparse
 import logging
 
-logging.basicConfig(filename='LOG_scrape_prop_guru_single.log', encoding='utf-8', level=logging.DEBUG)
-logging.getLogger().setLevel(logging.INFO)
+# Create a logger object
+logger = logging.getLogger('my_logger')
+logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
 
-logging.info(f'START RUN: {datetime.datetime.utcnow()}')
+# Create a file handler which logs even debug messages
+fh = logging.FileHandler('LOG_scrape_prop_guru_single.log')
+fh.setLevel(logging.DEBUG)
+
+# Create a console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)  # Only log errors and above to the console
+
+# Create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+
+# Add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
+
+
+
+logger.info(f'START RUN: {datetime.datetime.utcnow()}')
 
 # Local
 import filter_url_param_config
@@ -38,19 +58,19 @@ def delete_files_in_directory(directory_path):
                     os.remove(file_path)
                     #print(f"Deleted file: {file_path}")
             except Exception as e:
-                logging.warning(f"Failed to delete file {file_path}. Error: {str(e)}")
+                logger.warning(f"Failed to delete file {file_path}. Error: {str(e)}")
     else:
-        logging.warning(f"Directory not found: {directory_path}")
+        logger.warning(f"Directory not found: {directory_path}")
 
 def validateSession(path_to_chrome):
 
-    logging.info('Starting bot...')
+    logger.info('Starting bot...')
     if botHAR_rpi_fixed.main(path_to_chrome):
-        logging.info('HAR DOWNLOAD: SUCCESS')
+        logger.info('HAR DOWNLOAD: SUCCESS')
         return True
         print(f'...HAR exported to www.propertyguru.com.sg.har')
     else:
-        logging.warning('HAR DOWNLOAD: FAIL')
+        logger.warning('HAR DOWNLOAD: FAIL')
         return False
 
 
@@ -63,7 +83,7 @@ def getHeaders(path_to_har):
     #target = 'https://www.propertyguru.com.sg/property-for-sale/21?property_type=H&property_type_code%5B0%5D=6J&property_type_code%5B1%5D=EA&property_type_code%5B2%5D=EM&search=true'
     for i,entry in enumerate(entries):
         if entry['request']['url'].startswith(target) and entry['request']['method'] == 'GET':
-            logging.info(f'Valid GET request at entry index {i}')
+            logger.info(f'Valid GET request at entry index {i}')
             break
         else:
             raise ValueError("ERROR: Could not find header in HAR!")
@@ -79,23 +99,23 @@ def getHeaders(path_to_har):
     for cookie in cookies:
         if cookie.get("name") == '__cf_bm':
             cookie_expiry =cookie['expires'].split(".")[0]
-            logging.info(f'CF COOKIE EXPIRES: {cookie_expiry}')
+            logger.info(f'CF COOKIE EXPIRES: {cookie_expiry}')
     cookie_expiry_ts = datetime.datetime.strptime(cookie_expiry, "%Y-%m-%dT%H:%M:%S")        
     
     return {'headers':headers, 'cookie_expiry_ts':cookie_expiry_ts}
 
 def testConnPass(headers):
     session = requests.Session()
-    logging.info('Test connection:')
+    logger.info('Test connection:')
     test_url = "https://www.propertyguru.com.sg/property-for-sale/21?"
     test_url = "https://www.propertyguru.com.sg/property-for-sale/26?property_type=H&property_type_code[]=1R&property_type_code[]=2A&property_type_code[]=2I&property_type_code[]=2S&property_type_code[]=3A&property_type_code[]=3NG&property_type_code[]=3Am&property_type_code[]=3NGm&property_type_code[]=3I&property_type_code[]=3Im&property_type_code[]=3S&property_type_code[]=3STD&property_type_code[]=3PA&property_type_code[]=4A&property_type_code[]=4PA&property_type_code[]=4NG&property_type_code[]=5A&property_type_code[]=4STD&property_type_code[]=4I&property_type_code[]=4S&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&property_type_code[]=6J&property_type_code[]=EA&property_type_code[]=EM&property_type_code[]=MG&property_type_code[]=TE&search=true"
     #test_url = 'https://www.propertyguru.com.sg/property-for-sale/21?property_type=H&property_type_code%5B0%5D=6J&property_type_code%5B1%5D=EA&property_type_code%5B2%5D=EM&search=true'
     resp = session.get(test_url, headers = headers, verify=False)
     if resp.status_code == 200:
-        logging.info('... valid cookies')
+        logger.info('... valid cookies')
         return True
     else:
-        logging.info('...failed')
+        logger.info('...failed')
         return False
         
 def getPages(headers,filter_url_params):
@@ -112,7 +132,7 @@ def getPages(headers,filter_url_params):
 
         if numbers:
             max_number = max(numbers)
-            logging.info(f"# pages: {max_number}")       
+            logger.info(f"# pages: {max_number}")       
         return max_number
 
 
@@ -159,7 +179,7 @@ def process_item(item, session, headers):
         #file.write(response.text)
     w2 = time.time()
     if page %5 == 0:
-        logging.info(f'{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s')
+        logger.info(f'{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s')
     return None
 
 def parallel_process(items, num_workers):
@@ -187,9 +207,9 @@ def log_run(start_t, filter_url_name):
     #     file.write(f"End: {datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%S')} \n")
     #     file.write(f"Pages: {TOTAL_PAGES} \n")
     #     file.write(f"Total Size (MB): {get_directory_size(dirpath,filter_url_name)}\n")
-    logging.info(f"QUERY: {filter_url_name} | Start: {start_t} \n")
-    logging.info(f"QUERY: {filter_url_name} | End: {datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%S')} \n")
-    logging.info(f"QUERY: {filter_url_name} | Pages: {TOTAL_PAGES} \n")
+    logger.info(f"QUERY: {filter_url_name} | Start: {start_t} \n")
+    logger.info(f"QUERY: {filter_url_name} | End: {datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%S')} \n")
+    logger.info(f"QUERY: {filter_url_name} | Pages: {TOTAL_PAGES} \n")
         
 if __name__ == "__main__":
  
@@ -204,7 +224,7 @@ if __name__ == "__main__":
     try:
         os.makedirs(dirpath)
     except FileExistsError as e:
-        logging.error(e)
+        logger.error(e)
         
     path_to_chrome = f'{config_data["path_to_chromium_browser"]} %s --incognito'
     delete_files_in_directory(dirpath)
@@ -243,29 +263,29 @@ if __name__ == "__main__":
         for item in tqdm(url_list):
             # Check if the cookie is expiring soon
             if (cookie_expiry_ts - datetime.datetime.utcnow()) < datetime.timedelta(minutes=5):
-                logging.info(f"TTL: {cookie_expiry_ts - datetime.datetime.utcnow()}, re-validating...")
+                logger.info(f"TTL: {cookie_expiry_ts - datetime.datetime.utcnow()}, re-validating...")
                 retries = 0
                 test_pass = False
                 while (test_pass == False) and (retries < 3):
                     if retries == 3:
-                        logging.error(f"MAXIMUM CAPTCHA VALIDATION RETRIES EXCEEDED. EXITING AT {datetime.datetime.utcnow()}...")
+                        logger.error(f"MAXIMUM CAPTCHA VALIDATION RETRIES EXCEEDED. EXITING AT {datetime.datetime.utcnow()}...")
                         exit(1)
                         
-                    logging.info(f'RE-VAL: retries={retries}')
+                    logger.info(f'RE-VAL: retries={retries}')
                     validateSession(path_to_chrome)
                     har_extract = getHeaders(har_dir)
                     headers = har_extract['headers']
                     cookie_expiry_ts = har_extract['cookie_expiry_ts']
                     test_pass = testConnPass(headers)
                     retries += 1
-                logging.info(f'RE-VAL: test_pass={test_pass}')
+                logger.info(f'RE-VAL: test_pass={test_pass}')
             else:
                 # Then check if the page we are going to request is still valid\
                 if TOTAL_PAGES - item["page"] < 3: # When we are getting close to the end
-                    logging.info("Approaching end of pagination! Checking total pages.")
+                    logger.info("Approaching end of pagination! Checking total pages.")
                     latest_total_pages = getPages(headers,filter_url_params)
                     if item["page"] > latest_total_pages:
-                        logging.warning("TOTAL_PAGES changed. Initial: {TOTAL_PAGES} | Latest: {latest_total_pages}. BREAKING QUERY: {filter_url_name}")
+                        logger.warning("TOTAL_PAGES changed. Initial: {TOTAL_PAGES} | Latest: {latest_total_pages}. BREAKING QUERY: {filter_url_name}")
                         break
                 else:
                     process_item(item, session, headers)
