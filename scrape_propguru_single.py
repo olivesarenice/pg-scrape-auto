@@ -231,6 +231,7 @@ if __name__ == "__main__":
         testConnPass(headers)
         session = requests.Session()
         for item in tqdm(url_list):
+            # Check if the cookie is expiring soon
             if (cookie_expiry_ts - datetime.datetime.utcnow()) < datetime.timedelta(minutes=5):
                 print(f"TTL: {cookie_expiry_ts - datetime.datetime.utcnow()}, re-validating...")
                 retries = 0
@@ -248,6 +249,12 @@ if __name__ == "__main__":
                     retries += 1
                 print(f'RE-VAL: test_pass={test_pass}')
             else:
-                process_item(item, session, headers)
+                # Then check if the page we are going to request is still valid\
+                if TOTAL_PAGES - item["page"] < 3: # When we are getting close to the end
+                    latest_total_pages = getPages(headers,filter_url_params)
+                    if item["page"] > latest_total_pages:
+                       break
+                else:
+                    process_item(item, session, headers)
         log_run(dirpath, filter_url_name)
         
