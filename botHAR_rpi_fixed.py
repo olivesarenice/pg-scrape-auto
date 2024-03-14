@@ -145,6 +145,7 @@ def main(path_to_chrome):
     # sleep(1)
     pyautogui.press('enter')
     sleep(10)
+    pyautogui.moveRel(100,0, 1, pyautogui.easeOutQuad)
     pyautogui.click()
     sleep(1)
     # Close both tabs
