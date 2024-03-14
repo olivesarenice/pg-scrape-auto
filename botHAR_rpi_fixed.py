@@ -84,6 +84,7 @@ def main(path_to_chrome):
     sleep(10) # Wait until captcha is done
     print('Trying to solve captcha...')
     pyautogui.moveTo(95, 275, 2, pyautogui.easeOutQuad)
+    sleep(1)
     pyautogui.click()
     #solve_captcha(config_data['path_to_imgs']['captcha_box']) # Click on captcha naturally
     sleep(10) # Wait for captcha to verify
@@ -136,6 +137,7 @@ def main(path_to_chrome):
     #     return False
 
     pyautogui.moveTo(185,117, 1, pyautogui.easeOutQuad)
+    sleep(1)
     pyautogui.click()
     sleep(2)
     # Do the export.
