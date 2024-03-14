@@ -145,13 +145,14 @@ def main(path_to_chrome):
     # sleep(1)
     pyautogui.press('enter')
     sleep(10)
-
+    pyautogui.click()
+    sleep(1)
     # Close both tabs
     pyautogui.hotkey('ctrl', 'w')
     sleep(2)
     pyautogui.hotkey('ctrl', 'w')
     sleep(2)
-
+    print("...ACTIONS COMPLETE")
     return True
 
 if __name__ == '__main__':
