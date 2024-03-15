@@ -159,7 +159,7 @@ def process_item(item, session, headers):
     url = item["url"]
     #print(url)
     s1 = time.time()
-    time.sleep(1*random.random())
+    #time.sleep(1*random.random())
     s2 = time.time()
     #session = requests.Session() # DO NOT START A NEW SESSION
     #url = f"https://www.propertyguru.com.sg/property-for-sale/{str(n)}?"
@@ -170,6 +170,7 @@ def process_item(item, session, headers):
     g2 = time.time()
 
     if 'Bot Protection' in response.text:
+        logging.error(f"ERROR: Hit bot protection on PAGE <{page}> | URL <{url}> \n\n RESPONSE:: \n {response.text}")
         raise ValueError(f"ERROR: Hit bot protection on PAGE <{page}> | URL <{url}> \n\n RESPONSE:: \n {response.text}")
     #print(f"Processed item: {item}, Result: {response}")
     w1 = time.time()
