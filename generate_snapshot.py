@@ -1,21 +1,49 @@
 import pandas as pd
 import glob
 import os
+import logging
+import datetime 
 
+# Create a logger object
+logger = logging.getLogger('SNAPSHOT')
+logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
+
+# Define the filename with the current date
+log_filename = f"log/SCRAPER_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log"
+
+# Create a file handler which logs even debug messages, in append mode
+fh = logging.FileHandler(log_filename, mode='a')  # Append mode
+fh.setLevel(logging.DEBUG)
+
+# Create a console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)  # Only log errors and above to the console
+
+# Create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s',  datefmt='%Y-%m-%d %H:%M:%S', utc=True)
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+
+# Add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
+
+# Log a message from the second script
+logger.info(f'START SNAPSHOT: {datetime.datetime.utcnow()}')
 
 # Get most recent snapshot from BQ
 def get_latest_file(dir, filetype):
     # Returns the full file path 
     list_of_files = glob.glob(f'{dir}/*{filetype}')
     latest_file = max(list_of_files, key=os.path.getctime)
-    print(latest_file)
+    logger.info(latest_file)
     return latest_file
 
 def get_earliest_file(dir, filetype):
     # Returns the full file path 
     list_of_files = glob.glob(f'{dir}/*{filetype}')
     earliest_file = min(list_of_files, key=os.path.getctime)
-    print(earliest_file)
+    logger.info(earliest_file)
     return earliest_file
 
 def snapshot_exists():
@@ -30,7 +58,7 @@ def create_updated_snapshot(prev_snapshot_listings: pd.DataFrame, daily_listings
         daily_listings['approx_date_listed'] = pd.to_datetime(daily_listings['approx_date_listed']).dt.date
         daily_listings['latest_date_found'] = daily_listings['date_found']
 
-        print(daily_listings.dtypes)
+        logger.info(daily_listings.dtypes)
         
         new_listings = daily_listings[~daily_listings['id'].isin(prev_snapshot_listings['id'])]
 

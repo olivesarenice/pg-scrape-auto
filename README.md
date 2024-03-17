@@ -187,6 +187,7 @@ Obstacles:
 - Overall, RPi has its custom scripts for `botHAR_rpi_fixed.py` and `scrap_propguru_single.py`, the subsequent steps are the same
 - Concerns with lifetime of the SD cards considering 1GB of writes per day * 365 days.
 - Considering to migrate the entire OS onto a new 64GB card with Class10 write speeds, possibly get x2.5 writing.
+- I used a 3.5" screen from goodtft: donwload the drivers from https://github.com/goodtft/LCD-show.git and run `sudo ./LCD35-show` inside the repo to install drivers.
 
 Ideas:
 - Consider implementing more dimensions of property searches --> by home description (LLM) or image vibe (DALL-E) --> how to power this? will need some form of vectorDB 

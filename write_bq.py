@@ -3,6 +3,35 @@ from google.oauth2 import service_account
 from pandas_gbq import to_gbq
 from generate_snapshot import get_latest_file
 import datetime
+import logging
+
+# Create a logger object
+logger = logging.getLogger('UPLOAD')
+logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
+
+# Define the filename with the current date
+log_filename = f"log/SCRAPER_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log"
+
+# Create a file handler which logs even debug messages, in append mode
+fh = logging.FileHandler(log_filename, mode='a')  # Append mode
+fh.setLevel(logging.DEBUG)
+
+# Create a console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)  # Only log errors and above to the console
+
+# Create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s',  datefmt='%Y-%m-%d %H:%M:%S', utc=True)
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+
+# Add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
+
+# Log a message from the second script
+logger.info(f'START UPLOAD: {datetime.datetime.utcnow()}')
+
 # Set your Google Cloud project and BigQuery dataset information
 project_id = 'propguru'
 dataset_id = 'test_snapshot'
