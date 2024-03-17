@@ -17,7 +17,7 @@ logger = logging.getLogger('SCRAPER')
 logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
 
 # Create a file handler which logs even debug messages
-fh = logging.FileHandler(f"log/SCRAPER_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.log")
+fh = logging.FileHandler(f"log/pipeline_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log")
 fh.setLevel(logging.DEBUG)
 
 # Create a console handler with a higher log level
@@ -25,7 +25,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)  # Only log errors and above to the console
 
 # Create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s',  datefmt='%Y-%m-%d %H:%M:%S', utc=True)
+formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s')
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 

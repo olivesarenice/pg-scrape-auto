@@ -10,10 +10,14 @@ logger = logging.getLogger('UPLOAD')
 logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
 
 # Define the filename with the current date
-log_filename = f"log/SCRAPER_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log"
+log_filename = f"log/pipeline_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log"
 
 # Create a file handler which logs even debug messages, in append mode
-fh = logging.FileHandler(log_filename, mode='a')  # Append mode
+try:
+    fh = logging.FileHandler(log_filename, mode='a')  # Append mode
+except: 
+    fh = logging.FileHandler(f"log/writebq_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log")
+    
 fh.setLevel(logging.DEBUG)
 
 # Create a console handler with a higher log level
@@ -21,7 +25,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)  # Only log errors and above to the console
 
 # Create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s',  datefmt='%Y-%m-%d %H:%M:%S', utc=True)
+formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s')
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 
