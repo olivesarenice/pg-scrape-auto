@@ -35,7 +35,7 @@ logger.addHandler(fh)
 logger.addHandler(ch)
 
 # Log a message from the second script
-logger.info(f'START CLEANING: {datetime.datetime.utcnow()}')
+logger.info(f'START CLEANING: {datetime.utcnow()}')
 
 def processDetails(lst):
     property_type, lease_type, completed = '', '', ''
