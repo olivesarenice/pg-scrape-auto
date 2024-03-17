@@ -1,9 +1,10 @@
 import pandas as pd
 from google.oauth2 import service_account
 from pandas_gbq import to_gbq
-from generate_snapshot import get_latest_file
 import datetime
 import logging
+import glob 
+import os
 
 # Create a logger object
 logger = logging.getLogger('UPLOAD')
@@ -35,6 +36,13 @@ logger.addHandler(ch)
 
 # Log a message from the second script
 logger.info(f'START UPLOAD: {datetime.datetime.utcnow()}')
+
+def get_latest_file(dir, filetype):
+    # Returns the full file path 
+    list_of_files = glob.glob(f'{dir}/*{filetype}')
+    latest_file = max(list_of_files, key=os.path.getctime)
+    logger.info(latest_file)
+    return latest_file
 
 # Set your Google Cloud project and BigQuery dataset information
 project_id = 'propguru'

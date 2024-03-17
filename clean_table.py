@@ -11,13 +11,13 @@ logger = logging.getLogger('CLEANING TABLE')
 logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
 
 # Define the filename with the current date
-log_filename = f"log/pipeline_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log"
+log_filename = f"log/pipeline_{datetime.utcnow().date().strftime('%Y%m%d')}.log"
 
 # Create a file handler which logs even debug messages, in append mode
 try:
     fh = logging.FileHandler(log_filename, mode='a')  # Append mode
 except: 
-    fh = logging.FileHandler(f"log/cleantable_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log")
+    fh = logging.FileHandler(f"log/cleantable_{datetime.utcnow().date().strftime('%Y%m%d')}.log")
     
 fh.setLevel(logging.DEBUG)
 
