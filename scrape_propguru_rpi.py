@@ -245,6 +245,10 @@ if __name__ == "__main__":
         filter_url_name = filter_url['name']
         filter_url_params = filter_url['params']
         TOTAL_PAGES = getPages(headers, filter_url_params)
+        if TOTAL_PAGES > 100:
+            PAGE_CHECK_THRESHOLD=20
+        else:
+            PAGE_CHECK_THRESHOLD=5
         #TOTAL_PAGES = 
         if config_data['test_run']:
             if TOTAL_PAGES > 25:
@@ -283,7 +287,7 @@ if __name__ == "__main__":
                 logger.info(f'RE-VAL: test_pass={test_pass}')
             else:
                 # Then check if the page we are going to request is still valid\
-                if TOTAL_PAGES - item["page"] < 3: # When we are getting close to the end
+                if TOTAL_PAGES - item["page"] < PAGE_CHECK_THRESHOLD: # When we are getting close to the end
                     logger.info("Approaching end of pagination! Checking total pages.")
                     latest_total_pages = getPages(headers,filter_url_params)
                     if item["page"] > latest_total_pages:
