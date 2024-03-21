@@ -241,9 +241,23 @@ if __name__ == "__main__":
     #print(cookie_expiry_ts )
     ### Allows specific URL params
     for filter_url in filter_url_param_config.ENABLED_FILTERS:
+        
+        
+        
         start_t = datetime.datetime.utcnow()
         filter_url_name = filter_url['name']
         filter_url_params = filter_url['params']
+    
+        if 'LANDED' in filter_url_name: # stagger for 60 mins to cool off before the last scrape
+            logger.info("PAUSING SCRAPE")
+            time.sleep(60*60)
+            logger.info("WAKING UP AND VALIDATING...")
+            validateSession(path_to_chrome) 
+            har_dir = f'{config_data["path_to_har"]}/www.propertyguru.com.sg.har'
+            har_extract = getHeaders(har_dir)
+            headers = har_extract['headers']
+            cookie_expiry_ts = har_extract['cookie_expiry_ts']
+        
         TOTAL_PAGES = getPages(headers, filter_url_params)
         if TOTAL_PAGES > 100:
             PAGE_CHECK_THRESHOLD=20
