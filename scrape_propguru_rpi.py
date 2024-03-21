@@ -177,7 +177,7 @@ def process_item(item, session, headers):
         file.write(truncateHTML(response))
         #file.write(response.text)
     w2 = time.time()
-    if page %5 == 0:
+    if page %10 == 0:
         logger.info(f'{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s')
     return None
 
@@ -249,7 +249,7 @@ if __name__ == "__main__":
         filter_url_params = filter_url['params']
     
         if 'LANDED' in filter_url_name: # stagger for 60 mins to cool off before the last scrape
-            logger.info("PAUSING SCRAPE")
+            logger.info("PAUSING SCRAPE for 60 mins")
             time.sleep(60*60)
             logger.info("WAKING UP AND VALIDATING...")
             validateSession(path_to_chrome) 
