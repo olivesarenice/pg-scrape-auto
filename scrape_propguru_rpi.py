@@ -61,10 +61,10 @@ def delete_files_in_directory(directory_path):
     else:
         logger.warning(f"Directory not found: {directory_path}")
 
-def validateSession(path_to_chrome):
+def validateSession(path_to_chrome, target_url = None):
 
     logger.info('Starting bot...')
-    if botHAR_rpi.main(path_to_chrome):
+    if botHAR_rpi.main(path_to_chrome, target_url):
         logger.info('HAR DOWNLOAD: SUCCESS')
         return True
     else:
@@ -168,8 +168,8 @@ def process_item(item, session, headers):
     g2 = time.time()
 
     if 'Bot Protection' in response.text:
-        logging.error(f"ERROR: Hit bot protection on PAGE <{page}> | URL <{url}> \n\n RESPONSE:: \n {response.text}")
-        raise ValueError(f"ERROR: Hit bot protection on PAGE <{page}> | URL <{url}> \n\n RESPONSE:: \n {response.text}")
+        logging.warning(f"WARNING: Returning FALSE - Hit bot protection on PAGE <{page}> | URL <{url}> \n\n RESPONSE:: \n {response.text}")
+        return False
     #print(f"Processed item: {item}, Result: {response}")
     w1 = time.time()
 
@@ -179,7 +179,7 @@ def process_item(item, session, headers):
     w2 = time.time()
     if page %10 == 0:
         logger.info(f'{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s')
-    return None
+    return True
 
 def parallel_process(items, num_workers):
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
@@ -248,19 +248,19 @@ if __name__ == "__main__":
         filter_url_name = filter_url['name']
         filter_url_params = filter_url['params']
     
-        if 'LANDED' in filter_url_name: # stagger for 60 mins to cool off before the last scrape
-            logger.info("PAUSING SCRAPE for 60 mins")
-            time.sleep(60*60)
-            logger.info("WAKING UP AND VALIDATING...")
-            validateSession(path_to_chrome) 
-            har_dir = f'{config_data["path_to_har"]}/www.propertyguru.com.sg.har'
-            har_extract = getHeaders(har_dir)
-            headers = har_extract['headers']
-            cookie_expiry_ts = har_extract['cookie_expiry_ts']
+        # if 'LANDED' in filter_url_name: # stagger for 60 mins to cool off before the last scrape
+        #     logger.info("PAUSING SCRAPE for 60 mins")
+        #     time.sleep(60*60)
+        #     logger.info("WAKING UP AND VALIDATING...")
+        #     validateSession(path_to_chrome) 
+        #     har_dir = f'{config_data["path_to_har"]}/www.propertyguru.com.sg.har'
+        #     har_extract = getHeaders(har_dir)
+        #     headers = har_extract['headers']
+        #     cookie_expiry_ts = har_extract['cookie_expiry_ts']
         
         TOTAL_PAGES = getPages(headers, filter_url_params)
-        if TOTAL_PAGES > 100:
-            PAGE_CHECK_THRESHOLD=20
+        if TOTAL_PAGES > 400:
+            PAGE_CHECK_THRESHOLD=20 # Assume max 5% variation in pages
         else:
             PAGE_CHECK_THRESHOLD=5
         #TOTAL_PAGES = 
@@ -308,7 +308,22 @@ if __name__ == "__main__":
                         logger.warning("TOTAL_PAGES changed. Initial: {TOTAL_PAGES} | Latest: {latest_total_pages}. BREAKING QUERY: {filter_url_name}")
                         break
                 else:
-                    process_item(item, session, headers)
+                    # Finally, try to process the url, and handle the bot protection page if it gets triggered.
+                    process_retries = 0 
+                    while not process_item(item, session, headers): # returns False when Bot Detection is found
+                        logger.warning("WARNING: BOT DETECTION PAGE - RETRYING REQUEST...")
+                        process_retries += 1
+                        
+                        if process_retries == 3:
+                            logger.error(f"MAXIMUM CAPTCHA VALIDATION RETRIES EXCEEDED FOR {item['url']}. EXITING AT {datetime.datetime.utcnow()}...")
+                            exit(1)
+                        
+                        # Validate the session and try to update the headers.
+                        validateSession(path_to_chrome, item['url'] ) # Important to use the ACTUAL url that we are getting rejected on.
+                        har_dir = f'{config_data["path_to_har"]}/www.propertyguru.com.sg.har'
+                        har_extract = getHeaders(har_dir)
+                        headers = har_extract['headers']
+                            
 
         log_run(dirpath, filter_url_name)
         
