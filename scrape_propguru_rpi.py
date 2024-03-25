@@ -116,8 +116,8 @@ def testConnPass(headers):
         logger.info('...failed')
         return False
         
-def getPages(headers,filter_url_params):
-    r = requests.get(f'https://www.propertyguru.com.sg/property-for-sale?{filter_url_params}',headers=headers, verify = False)
+def getPages(headers,url):
+    r = requests.get(url,headers=headers, verify = False)
     if r.status_code == 200:
         
         # Parse the HTML content using BeautifulSoup
@@ -257,8 +257,8 @@ if __name__ == "__main__":
         #     har_extract = getHeaders(har_dir)
         #     headers = har_extract['headers']
         #     cookie_expiry_ts = har_extract['cookie_expiry_ts']
-        
-        TOTAL_PAGES = getPages(headers, filter_url_params)
+        pages_url = f'https://www.propertyguru.com.sg/property-for-sale?{filter_url_params}'
+        TOTAL_PAGES = getPages(headers, pages_url)
         if TOTAL_PAGES > 400:
             PAGE_CHECK_THRESHOLD=20 # Assume max 5% variation in pages
         else:
@@ -280,6 +280,7 @@ if __name__ == "__main__":
         # parallel_process(url_list, num_parallel_workers)
         testConnPass(headers)
         session = requests.Session()
+        prev_item = None
         for item in tqdm(url_list):
             # Check if the cookie is expiring soon
             if (cookie_expiry_ts - datetime.datetime.utcnow()) < datetime.timedelta(minutes=5):
@@ -303,7 +304,8 @@ if __name__ == "__main__":
                 # Then check if the page we are going to request is still valid\
                 if TOTAL_PAGES - item["page"] < PAGE_CHECK_THRESHOLD: # When we are getting close to the end
                     logger.info("Approaching end of pagination! Checking total pages.")
-                    latest_total_pages = getPages(headers,filter_url_params)
+                    if not prev_item == None:
+                        latest_total_pages = getPages(headers,prev_item["url"])
                     if item["page"] > latest_total_pages:
                         logger.warning("TOTAL_PAGES changed. Initial: {TOTAL_PAGES} | Latest: {latest_total_pages}. BREAKING QUERY: {filter_url_name}")
                         break
@@ -323,6 +325,7 @@ if __name__ == "__main__":
                         har_dir = f'{config_data["path_to_har"]}/www.propertyguru.com.sg.har'
                         har_extract = getHeaders(har_dir)
                         headers = har_extract['headers']
+            prev_item = item    
                             
 
         log_run(dirpath, filter_url_name)
