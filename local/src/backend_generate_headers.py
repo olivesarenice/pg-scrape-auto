@@ -82,13 +82,14 @@ def solve_captcha(target_image_path):
 # SUBROUTINES
 
 
-def generate_headers(cmd_arg, config):
+def main(cmd_arg, config):
 
     wait_multiple = config["pyautogui"]["wait_multiple"]
     # Load webpage
     print("Starting browser")
-    webbrowser.get(config["path_to_chrome"]).open(config["bot_trigger_url"])
-
+    webbrowser.get(f"{config["path_to_chrome"]} %s --incognito").open(
+        config["scraper"]["bot_trigger_url"]
+    )
     sleep(10)  # Wait until captcha is done
 
     solve_captcha(config["pyautogui"]["img_captcha_box"])  # Click on captcha naturally
@@ -115,18 +116,18 @@ def generate_headers(cmd_arg, config):
     sleep(2)
 
     logger.info("Exporting HAR...")
-    # Click on network tab, if not already open.
-    network_location = pyautogui.locateOnScreen(config["pyautogui"]["img_network"])
+    # # Click on network tab, if not already open.
+    # network_location = pyautogui.locateOnScreen(config["pyautogui"]["img_network"])
 
-    if network_location:
-        pyautogui.click(
-            network_location.left + network_location.width / 2,
-            network_location.top + network_location.height / 2,
-        )
-        sleep(2)
-    else:
-        logger.error("Network tab not found.")
-        return False
+    # if network_location:
+    #     pyautogui.click(
+    #         network_location.left + network_location.width / 2,
+    #         network_location.top + network_location.height / 2,
+    #     )
+    #     sleep(2)
+    # else:
+    #     logger.error("Network tab not found.")
+    #     return False
 
     # Export HAR
     export_location = pyautogui.locateOnScreen(config["pyautogui"]["img_export"])
@@ -155,7 +156,3 @@ def generate_headers(cmd_arg, config):
     sleep(2)
 
     return True
-
-
-def scrape_htmls(cmd_arg, config):
-    pass
