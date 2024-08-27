@@ -1,0 +1,57 @@
+# "test_run":0,
+# "path_to_chrome":"C:/Program Files/Google/Chrome/Application/chrome.exe",
+# "path_to_chromium_browser":"/usr/bin/chromium-browser",
+# "path_to_imgs":{
+#     "captcha_box":"pyautogui_imgs/target.png",
+#     "network_unfocus":"pyautogui_imgs/network.png",
+#     "network_focus":"pyautogui_imgs/network2.png",
+#     "export_har":"pyautogui_imgs/exp_har.png"
+# },
+# "path_to_data_htmls":"data/1_dl-htmls",
+# "path_to_har":"."
+
+job_name: "pg-scrape-auto-local"
+log_level: "DEBUG"
+local_log_dir: "logs"
+path_to_chrome: "C:/Program Files/Google/Chrome/Application/chrome.exe"
+scraper:
+    bot_trigger_url: "https://www.propertyguru.com.sg/property-for-sale/25?property_type=H&property_type_code[]=1R&property_type_code[]=2A&property_type_code[]=2I&property_type_code[]=2S&property_type_code[]=3A&property_type_code[]=3NG&property_type_code[]=3Am&property_type_code[]=3NGm&property_type_code[]=3I&property_type_code[]=3Im&property_type_code[]=3S&property_type_code[]=3STD&property_type_code[]=3PA&property_type_code[]=4A&property_type_code[]=4PA&property_type_code[]=4NG&property_type_code[]=5A&property_type_code[]=4STD&property_type_code[]=4I&property_type_code[]=4S&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&property_type_code[]=6J&property_type_code[]=EA&property_type_code[]=EM&property_type_code[]=MG&property_type_code[]=TE&search=true"
+    test_url: "https://www.propertyguru.com.sg/property-for-sale/26?property_type=H&property_type_code[]=1R&property_type_code[]=2A&property_type_code[]=2I&property_type_code[]=2S&property_type_code[]=3A&property_type_code[]=3NG&property_type_code[]=3Am&property_type_code[]=3NGm&property_type_code[]=3I&property_type_code[]=3Im&property_type_code[]=3S&property_type_code[]=3STD&property_type_code[]=3PA&property_type_code[]=4A&property_type_code[]=4PA&property_type_code[]=4NG&property_type_code[]=5A&property_type_code[]=4STD&property_type_code[]=4I&property_type_code[]=4S&property_type_code[]=5I&property_type_code[]=5PA&property_type_code[]=5S&property_type_code[]=6J&property_type_code[]=EA&property_type_code[]=EM&property_type_code[]=MG&property_type_code[]=TE&search=true"
+    pg_endpoint: "https://www.propertyguru.com.sg/property-for-sale/"
+    har_file: "www.propertyguru.com.sg.har"
+    har_dir: "."
+pyautogui:
+    wait_multiple: 1 # Multiplies all sleeps by this amount. Useful for slower machines.
+    img_captcha_box: "pyautogui/target.png"
+    img_network: "pyautogui/network.png"
+    img_export: "pyautogui/export.png"
+
+data:
+    html_dir: "data/01_htmls"
+upload:
+    s3_bucket: "xxxx" # local machine will need to run `aws configure` after the IAM user (long-lived credentials) are created. Then enter the access keys and access key secret. Will use that to authenticate everytime.
+filter_configs:
+    - name: HDB-1-2RM
+      enabled: 1
+      params: "property_type=H&property_type_code[]=1R&property_type_code[]=2A&property_type_code[]=2I&property_type_code[]=2S&search=true"
+    - name: HDB-3RM
+      enabled: 1
+      params: "property_type=H&property_type_code[]=3A&property_type_code[]=3NG&property_type_code[]=3Am&property_type_code[]=3NGm&property_type_code[]=3I&property_type_code[]=3Im&property_type_code[]=3S&property_type_code[]=3STD&property_type_code[]=3PA&search=true"
+    - name: HDB-4RM
+      enabled: 1
+      params: "property_type=H&property_type_code[]=4A&property_type_code[]=4NG&property_type_code[]=4PA&property_type_code[]=4S&property_type_code[]=4I&property_type_code[]=4STD&search=true"
+    - name: HDB-5RM
+      enabled: 1
+      params: "property_type=H&property_type_code[]=5PA&property_type_code[]=5I&property_type_code[]=5A&property_type_code[]=5S&search=true"
+    - name: HDB-EX
+      enabled: 1
+      params: "property_type=H&property_type_code[]=TE&property_type_code[]=MG&property_type_code[]=EA&property_type_code[]=EM&property_type_code[]=6J&search=true"
+    - name: NON-LANDED-ALL
+      enabled: 1
+      params: "property_type=N&property_type_code[]=CONDO&property_type_code[]=APT&property_type_code[]=WALK&property_type_code[]=CLUS&property_type_code[]=EXCON&search=true"
+    - name: LANDED-ALL
+      enabled: 1
+      params: "property_type=L&property_type_code[]=TERRA&property_type_code[]=DETAC&property_type_code[]=SEMI&property_type_code[]=CORN&property_type_code[]=LBUNG&property_type_code[]=BUNG&property_type_code[]=SHOPH&property_type_code[]=RLAND&property_type_code[]=TOWN&property_type_code[]=CON&property_type_code[]=LCLUS&search=true"
+    - name: NO-FILTER
+      enabled: 0
+      params: ""
