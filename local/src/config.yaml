@@ -1,15 +1,3 @@
-# "test_run":0,
-# "path_to_chrome":"C:/Program Files/Google/Chrome/Application/chrome.exe",
-# "path_to_chromium_browser":"/usr/bin/chromium-browser",
-# "path_to_imgs":{
-#     "captcha_box":"pyautogui_imgs/target.png",
-#     "network_unfocus":"pyautogui_imgs/network.png",
-#     "network_focus":"pyautogui_imgs/network2.png",
-#     "export_har":"pyautogui_imgs/exp_har.png"
-# },
-# "path_to_data_htmls":"data/1_dl-htmls",
-# "path_to_har":"."
-
 job_name: "pg-scrape-auto-local"
 log_level: "DEBUG"
 local_log_dir: "logs"
@@ -25,7 +13,6 @@ pyautogui:
     img_captcha_box: "pyautogui/target.png"
     img_network: "pyautogui/network.png"
     img_export: "pyautogui/export.png"
-
 data:
     html_dir: "data/01_htmls"
 upload:
