@@ -6,7 +6,7 @@ import random
 import time
 import datetime
 import os
-
+import utils
 from bs4 import BeautifulSoup
 import argparse
 from loguru import logger
@@ -141,19 +141,20 @@ def process_item(item):
     # print(f"Processed item: {item}, Result: {response}")
     w1 = time.time()
 
-    with open(f"{config["data"]["html_dir"]}/{name}_{page}.html", "w", encoding="utf-8") as file:
+    html_file_path = f"{config["data"]["html_dir"]}/{name}_{page}.html"
+    with open(html_file_path, "w", encoding="utf-8") as file:
         file.write(truncate_html(response))
         # file.write(response.text)
     w2 = time.time()
     if page %10 == 0:
         logger.debug(f'{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s')
-    return None
+    return html_file_path
 
 
 def parallel_process(items, num_workers):
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        executor.map(process_item, items)
-        return None
+        html_file_paths = list(executor.map(process_item, items))
+        return html_file_paths
 
 
 # def get_directory_size(directory_path, filter_url_name):
@@ -179,9 +180,50 @@ def parallel_process(items, num_workers):
 #         file.write(f"End: {datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%S')} \n")
 #         file.write(f"Pages: {TOTAL_PAGES} \n")
 #         file.write(f"Total Size (MB): {get_directory_size(dirpath,filter_url_name)}\n")
+import zipfile
+def create_zip_file(list_of_file_paths, zip_file_path):
+    """Create a zip file containing the specified files.
+    
+    Args:
+        list_of_file_paths (list of str): List of file paths to be zipped.
+        zip_file_path (str): Path where the zip file will be saved.
+    """
+    os.makedirs(os.path.dirname(zip_file_path), exist_ok=True)
+    with zipfile.ZipFile(zip_file_path, 'w') as zipf:
+        for file_path in list_of_file_paths:
+            if os.path.isfile(file_path):
+                zipf.write(file_path, os.path.basename(file_path))
+            else:
+                print(f"File {file_path} does not exist and will be skipped.")
 
+import boto3
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
+def upload_to_s3(zip_file_path, bucket_name, s3_key, region_name):
+    """Upload a file to an S3 bucket.
+    
+    Args:
+        zip_file_path (str): Path to the file to be uploaded.
+        bucket_name (str): Name of the S3 bucket.
+        s3_key (str): S3 object key for the uploaded file.
+        aws_access_key_id (str, optional): AWS access key ID.
+        aws_secret_access_key (str, optional): AWS secret access key.
+        region_name (str, optional): AWS region name.
+    """
+    s3_client = boto3.client(
+        's3',
+        region_name=region_name
+    )
+    
+    try:
+        s3_client.upload_file(zip_file_path, bucket_name, s3_key)
+        print(f"File uploaded successfully to s3://{bucket_name}/{s3_key}")
+    except (NoCredentialsError, PartialCredentialsError) as e:
+        print(f"Credentials error: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
-def main(cmd_arg, config):
+def scrape(cmd_arg, config):
+    ymdh = config["ymdh"]
     dirpath = config["data"]["html_dir"]
 
     try:
@@ -195,6 +237,7 @@ def main(cmd_arg, config):
 
     test_conn(headers, config["scraper"]["test_url"])
 
+    all_file_paths = []
     ### Allows specific URL params
     for filter_config in config["filter_configs"]:
         if filter_config["enabled"]:
@@ -217,13 +260,26 @@ def main(cmd_arg, config):
             ]
 
             # Perform parallel processing
-            parallel_process(
+            html_file_paths = parallel_process(
                 url_list, cmd_arg.n_workers
             ) 
+            all_file_paths.extend(html_file_paths)
+    logger.info("Scrape complete.")
+    return None
+ 
 
-            logger.info("Scrape complete. Exiting...")
+def upload(cmd_args, config):
+    ymdh = config["ymdh"]
+    all_file_paths = utils.get_file_paths_matching(f"{config['data']['html_dir']}", ".html")
+       
+    zip_fp = f"data/02_zipped/{ymdh["y"]}/{ymdh["m"]}/{ymdh["d"]}/htmls.zip"
+    create_zip_file(all_file_paths, zip_fp)
 
-
+    partition_key = f"02_zipped/{ymdh["y"]}/{ymdh["m"]}/{ymdh["d"]}/htmls.zip" 
+    upload_to_s3(zip_fp, config["upload"]["s3_bucket"], partition_key, config["aws"]["region"])
+    
+    logger.info(f"Uploaded {zip_fp} as {partition_key}.")
+    return None
 
 if __name__ == "__main__":
-    main()
+    pass

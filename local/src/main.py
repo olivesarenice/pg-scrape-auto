@@ -11,7 +11,7 @@ import yaml
 from loguru import logger
 import backend_generate_headers
 import backend_download_html
-import backend_upload
+import utils
 
 
 def init_config() -> dict:
@@ -104,14 +104,15 @@ if __name__ == "__main__":
     config = init_config()
     init_logger(config, cmd_arg)
     logger.info(f"Running main.py [{cmd_arg.step}] in directory: {os.getcwd()} ")
-
+    ymdh = utils.ts_to_ymdh(None)
+    config["ymdh"] = ymdh
     match cmd_arg.step:
         case "generate_headers":
             backend_generate_headers.main(cmd_arg, config)
             pass
         case "download_html":
-            backend_download_html.main(cmd_arg, config)
+            backend_download_html.scrape(cmd_arg, config)
             pass
         case "upload":
-            backend_upload.main(cmd_arg, config)
+            backend_download_html.upload(cmd_arg, config)
             pass
