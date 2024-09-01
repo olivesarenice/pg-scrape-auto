@@ -7,11 +7,12 @@ import os
 import sys
 import uuid
 
-import yaml
-from loguru import logger
-import backend_generate_headers
 import backend_download_html
+import backend_generate_headers
 import utils
+import yaml
+from dotenv import load_dotenv
+from loguru import logger
 
 
 def init_config() -> dict:
@@ -100,6 +101,7 @@ def parse_cmd_arguments() -> argparse.Namespace:
 
 if __name__ == "__main__":
 
+    load_dotenv()
     cmd_arg = parse_cmd_arguments()
     config = init_config()
     init_logger(config, cmd_arg)

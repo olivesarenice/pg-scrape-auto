@@ -1,14 +1,18 @@
-import json
-import requests
-import urllib3
+import argparse
 import concurrent.futures
+import datetime
+import json
+import os
 import random
 import time
-import datetime
-import os
+import zipfile
+
+import boto3
+import requests
+import urllib3
 import utils
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from bs4 import BeautifulSoup
-import argparse
 from loguru import logger
 
 # Configurations
@@ -180,7 +184,7 @@ def parallel_process(items, num_workers):
 #         file.write(f"End: {datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%S')} \n")
 #         file.write(f"Pages: {TOTAL_PAGES} \n")
 #         file.write(f"Total Size (MB): {get_directory_size(dirpath,filter_url_name)}\n")
-import zipfile
+
 def create_zip_file(list_of_file_paths, zip_file_path):
     """Create a zip file containing the specified files.
     
@@ -196,8 +200,7 @@ def create_zip_file(list_of_file_paths, zip_file_path):
             else:
                 print(f"File {file_path} does not exist and will be skipped.")
 
-import boto3
-from botocore.exceptions import NoCredentialsError, PartialCredentialsError
+
 def upload_to_s3(zip_file_path, bucket_name, s3_key, region_name):
     """Upload a file to an S3 bucket.
     
@@ -209,9 +212,16 @@ def upload_to_s3(zip_file_path, bucket_name, s3_key, region_name):
         aws_secret_access_key (str, optional): AWS secret access key.
         region_name (str, optional): AWS region name.
     """
+    
+    aws_access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
+    aws_secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+    print(region_name,aws_access_key_id, aws_secret_access_key)
+    
     s3_client = boto3.client(
         's3',
-        region_name=region_name
+        region_name=region_name,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key
     )
     
     try:
