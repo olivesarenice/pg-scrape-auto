@@ -72,13 +72,6 @@ def parse_cmd_arguments() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(desc)
     parser.add_argument(
-        "-run_type",
-        dest="run_type",
-        action="store",
-        required=True,
-        choices=["test", "full"],
-    )
-    parser.add_argument(
         "-step",
         dest="step",
         action="store",

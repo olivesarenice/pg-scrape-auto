@@ -254,7 +254,7 @@ def scrape(cmd_arg, config):
             filter_name = filter_config["name"]
             filter_params = filter_config["params"]
             TOTAL_PAGES = get_pages(headers, filter_params, config["scraper"]["pg_endpoint"])
-            if cmd_arg.run_type == "test":
+            if config["mode"] == "test":
                 if TOTAL_PAGES > 25:
                     TOTAL_PAGES = 25
 

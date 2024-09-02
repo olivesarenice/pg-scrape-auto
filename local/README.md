@@ -42,9 +42,13 @@ Your browser should open an incognito window and go to the site.
 You can run each of the 3 steps in series:
 
 ```
-python src/main.py -run_type full -step generate_headers
-python src/main.py -run_type full -step download_html
-python src/main.py -run_type full -step upload
+python src/main.py -step generate_headers
+python src/main.py -step download_html
+python src/main.py -step upload
 ```
 
 or just run the batch file as Administrator.
+
+Once ready to deploy, modify `config.yaml` to set
+
+`mode: "full"` instead of `mode: "test"`
