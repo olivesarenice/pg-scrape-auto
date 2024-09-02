@@ -1,10 +1,10 @@
-import webbrowser
-import pyautogui
-import random
-from time import sleep
 import json
-from loguru import logger
+import random
+import webbrowser
+from time import sleep
 
+import pyautogui
+from loguru import logger
 
 # HELPERS
 
@@ -90,8 +90,9 @@ def main(cmd_arg, config):
     webbrowser.get(f"{config["path_to_chrome"]} %s --incognito").open(
         config["scraper"]["bot_trigger_url"]
     )
+    print("Pause 10 seconds")
     sleep(10)  # Wait until captcha is done
-
+    print("continue")
     solve_captcha(config["pyautogui"]["img_captcha_box"])  # Click on captcha naturally
 
     sleep(10)  # Wait for captcha to verify
