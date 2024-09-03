@@ -1,48 +1,18 @@
 
 # This script takes all files in the html-files folder and extracts the summarised listing data into a dataframe, 1 row per listing. It is meant as a PoC to show how the listing data can be utilised. There is much richer data in the HTML which can be further extracted.
 
+import datetime
 import json
+import logging
+import os
+import traceback
+
 import pandas as pd
 from bs4 import BeautifulSoup
-import os
 from tqdm import tqdm
-import datetime
-import traceback
-import logging
-
-# Create a logger object
-logger = logging.getLogger('PROCESS LISTINGS')
-logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
-
-# Define the filename with the current date
-log_filename = f"log/pipeline_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log"
-
-# Create a file handler which logs even debug messages, in append mode
-try:
-    fh = logging.FileHandler(log_filename, mode='a')  # Append mode
-except: 
-    fh = logging.FileHandler(f"log/processlistings_{datetime.datetime.utcnow().date().strftime('%Y%m%d')}.log")
-    
-fh.setLevel(logging.DEBUG)
-
-# Create a console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)  # Only log errors and above to the console
-
-# Create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-
-# Add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)
-
-# Log a message from the second script
-logger.info(f'START PROCESSING: {datetime.datetime.utcnow()}')
 
 
-def parseSummary(html):
+def parse_summary(html):
     
     soup = BeautifulSoup(html, 'html.parser')
     script_tags = soup.find_all('script') # PropGuru preforms the JS script containing the listing data that will be displayed on the page. The summary data is stored as textual JS.

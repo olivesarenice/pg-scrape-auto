@@ -17,6 +17,9 @@ pillow = "^10.4.0"
 boto3 = "^1.35.10"
 requests = "^2.32.3"
 python-dotenv = "^1.0.1"
+pandas = "^2.2.2"
+tqdm = "^4.66.5"
+pyarrow = "^17.0.0"
 
 
 [build-system]
