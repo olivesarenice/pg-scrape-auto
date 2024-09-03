@@ -66,7 +66,7 @@ def parse_summary(html):
         raw_df["search_type"] = search_type_val
         return raw_df
     else:
-        print("No match found")
+        logger.warning("No match found")
 
 
 def extract_value_from_element(column_name, element):
@@ -160,12 +160,11 @@ def process_file(html_fp):
     return joined_df
 
 
-def download_htmls(bucket_name, s3_prefix):
+def download_htmls(bucket_name, s3_prefix, dest_dir):
     s3_client = boto3.client("s3")
 
     # Create local directory if it doesn't exist
-    local_dir = "data/tmp"
-    if not os.path.exists(local_dir):
+    if not os.path.exists(dest_dir):
         os.makedirs(local_dir)
 
     # List objects in the specified S3 prefix
@@ -186,9 +185,9 @@ def download_htmls(bucket_name, s3_prefix):
 
             # Unzip the file
             with zipfile.ZipFile(temp_file_path, "r") as zip_ref:
-                zip_ref.extractall(local_dir)
+                zip_ref.extractall(dest_dir)
                 for file_info in zip_ref.infolist():
-                    file_path = os.path.join(local_dir, file_info.filename)
+                    file_path = os.path.join(dest_dir, file_info.filename)
                     file_paths.append(file_path)
 
             # Clean up temporary zip file
@@ -286,40 +285,32 @@ def retrieve_transform_config(
     return transform_config
 
 
-if __name__ == "__main__":
-    # Example usage
-    bucket_name = "pg-scrape-auto"
-    y = "2024"
-    m = "09"
-    d = "03"
-    s3_prefix = f"02_zipped/{y}/{m}/{d}"
-    download = False
-    recompile = True
+def run(cmd_arg, config):
 
-    if download:
-        download_htmls(bucket_name, s3_prefix)
+    bucket_name = config["s3_bucket"]
+    y = config["ymdh"]["y"]
+    m = config["ymdh"]["m"]
+    d = config["ymdh"]["d"]
+    bucket_name = config["s3_bucket"]
+    # Download raw and compile
+    s3_prefix = f"{config["raw_zip_s3_prefix"]}/{y}/{m}/{d}"
+    if not cmd_arg.no_download:
+        download_htmls(bucket_name, s3_prefix, "data/htmls")
     file_paths = get_file_paths_matching("data/htmls", ".html")
-
     df_fp = "data/raw/raw_df.csv"
-    if recompile:
+    if not cmd_arg.no_recompile:
         df_concat = run_process_listings(file_paths)
         df_concat.to_csv(df_fp, index=False)
-
     else:
         df_concat = pd.read_csv(df_fp)
 
+    # Transform and save
     df_transform = run_transform_df(df_concat, retrieve_transform_config("listings"))
-    logger.info(df_transform.columns)
-    # file_name = "NON-LANDED-ALL_1"
-    # html_fp = f"../local/data/01"
     parquet_fp = f"data/transformed/df_concat.parquet"
     df_transform.to_parquet(parquet_fp, index=False)
-    s3_client = boto3.client("s3")
-    s3_key = f"03_transformed/{y}/{m}/{d}/df.parquet"
-    bucket_name = "pg-scrape-auto"
-    s3_client.upload_file(parquet_fp, bucket_name, s3_key)
-    print(f"File uploaded successfully to s3://{bucket_name}/{s3_key}")
 
-# df =
-# print(df)
-# df.to_csv(f"data/tmp/{file_name}_details.csv", index=False)
+    # Upload
+    s3_client = boto3.client("s3")
+    s3_key = f"{config["transformed_s3_prefix"]}/{y}/{m}/{d}/df.parquet"
+    s3_client.upload_file(parquet_fp, bucket_name, s3_key)
+    logger.info(f"File uploaded successfully to s3://{bucket_name}/{s3_key}")

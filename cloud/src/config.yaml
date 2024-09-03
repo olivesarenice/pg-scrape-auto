@@ -1,0 +1,5 @@
+log_level: "DEBUG"
+local_log_dir: "src/logs"
+s3_bucket: "pg-scrape-auto"
+raw_zip_s3_prefix: "02_zipped"
+transformed_s3_prefix: "03_transformed"
