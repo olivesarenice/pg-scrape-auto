@@ -114,7 +114,7 @@ def main(cmd_arg, config):
 
     # Switch to Inspect
     pyautogui.hotkey("alt", "tab")
-    sleep(2)
+    sleep(5)
 
     logger.info("Exporting HAR...")
     # # Click on network tab, if not already open.
@@ -137,7 +137,7 @@ def main(cmd_arg, config):
             export_location.left + export_location.width / 2,
             export_location.top + export_location.height / 2,
         )
-        sleep(2)
+        sleep(5)
 
     else:
         logger.error("Export button not found.")
