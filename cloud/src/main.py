@@ -7,7 +7,7 @@ import os
 import sys
 import uuid
 
-import backend_processing
+import backend_processing, backend_analysis
 import transforms_config
 import transforms
 import yaml
@@ -90,6 +90,14 @@ def parse_cmd_arguments() -> argparse.Namespace:
         type=str,
         dest="t",
         help="Date in YYYY-MM-DD UTC to run for. Will look at the partition for this date.",
+    ),
+    parser.add_argument(
+        "-step",
+        action="store",
+        type=str,
+        choices=["transform", "analysis"],
+        dest="step",
+        help="Step to run",
     )
     known_arg, unknown_arg = parser.parse_known_args()
     return known_arg
@@ -112,12 +120,17 @@ if __name__ == "__main__":
     cmd_arg = parse_cmd_arguments()
     if cmd_arg.t:
         cmd_arg.t = datetime.datetime.strptime(cmd_arg.t, "%Y-%m-%d")
+    else:
         cmd_arg.t = datetime.datetime.now(datetime.UTC)
-    cmd_arg.step = "cloud_transform"
+
     config = init_config()
     init_logger(config, cmd_arg)
     logger.info(f"Running main.py [{cmd_arg.step}] in directory: {os.getcwd()} ")
     ymdh = ts_to_ymdh(cmd_arg.t)
     config["ymdh"] = ymdh
 
-    backend_processing.run(cmd_arg, config)
+    if cmd_arg.step == "transform":
+        backend_processing.run(cmd_arg, config)
+    if cmd_arg.step == "analysis":
+        backend_analysis.run(cmd_arg, config)
+    logger.info("[main] EXITING.")

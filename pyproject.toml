@@ -20,6 +20,7 @@ python-dotenv = "^1.0.1"
 pandas = "^2.2.2"
 tqdm = "^4.66.5"
 pyarrow = "^17.0.0"
+pandasql = "^0.7.3"
 
 
 [build-system]

@@ -294,6 +294,7 @@ def run(cmd_arg, config):
     bucket_name = config["s3_bucket"]
     # Download raw and compile
     s3_prefix = f"{config["raw_zip_s3_prefix"]}/{y}/{m}/{d}"
+    logger.info(f"Raw data from: {s3_prefix}")
     if not cmd_arg.no_download:
         download_htmls(bucket_name, s3_prefix, "data/htmls")
     file_paths = get_file_paths_matching("data/htmls", ".html")
@@ -314,3 +315,5 @@ def run(cmd_arg, config):
     s3_key = f"{config["transformed_s3_prefix"]}/{y}/{m}/{d}/df.parquet"
     s3_client.upload_file(parquet_fp, bucket_name, s3_key)
     logger.info(f"File uploaded successfully to s3://{bucket_name}/{s3_key}")
+
+    # Run analysis
