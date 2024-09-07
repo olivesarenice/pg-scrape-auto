@@ -157,7 +157,7 @@ def process_file(html_fp):
     # print(joined_df)
 
     # print(df)
-    # joined_df.to_csv(f"data/tmp/{file_name}_joined.csv", index=False)
+    # joined_df.to_csv(f"tmp/data/tmp/{file_name}_joined.csv", index=False)
     return joined_df
 
 
@@ -389,9 +389,9 @@ def run(cmd_arg, config):
     logger.info(f"Raw data from: {s3_prefix}")
     if not cmd_arg.no_download:
         logger.info("Re-downloading HTMLs")
-        download_htmls(bucket_name, s3_prefix, "data/htmls")
-    file_paths = get_file_paths_matching("data/htmls", ".html")
-    df_fp = "data/raw/raw_df.parquet"
+        download_htmls(bucket_name, s3_prefix, "tmp/data/htmls")
+    file_paths = get_file_paths_matching("tmp/data/htmls", ".html")
+    df_fp = "tmp/data/raw/raw_df.parquet"
     if not cmd_arg.no_recompile:
         logger.info("Re-compiling HTMLs into single file")
         df_concat = run_process_listings(file_paths)
@@ -404,7 +404,7 @@ def run(cmd_arg, config):
     # Transform and save
     transform_config = retrieve_transform_config("listings")
     df_transform = run_transform_df(df_concat, transform_config)
-    parquet_fp = f"data/transformed/df_concat.parquet"
+    parquet_fp = f"tmp/data/transformed/df_concat.parquet"
     df_transform.to_parquet(parquet_fp, index=False)
     logger.debug(df_transform.columns)
 

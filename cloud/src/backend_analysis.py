@@ -58,7 +58,7 @@ def run(cmd_arg, config):
     # Download transformed data
     s3_client = boto3.client("s3")
     s3_key = f"{config["transformed_s3_prefix"]}/{y}/{m}/{d}/df.parquet"
-    df_fp = "data/transformed/df.parquet"
+    df_fp = "tmp/data/transformed/df.parquet"
     #s3_client.download_file(bucket_name, s3_key, df_fp)
 
     # Create analysis tables
@@ -67,7 +67,7 @@ def run(cmd_arg, config):
     analysis_df = generate_analysis(df)
 
     # Save
-    analysis_fp = f"data/analysis/df_local.parquet"
+    analysis_fp = f"tmp/data/analysis/df_local.parquet"
     analysis_df.to_parquet(analysis_fp, index=False)
 
     # Upload

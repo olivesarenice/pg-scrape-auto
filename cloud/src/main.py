@@ -6,7 +6,7 @@ import datetime
 import os
 import sys
 import uuid
-
+import json
 import backend_processing, backend_analysis
 import transforms_config
 import transforms
@@ -113,6 +113,51 @@ def ts_to_ymdh(ts):
     ymdh["h"] = ts.strftime("%H")
 
     return ymdh
+
+
+def lambda_handler(event, context):
+    step = event.get("step", "transform")  # Default to 'transform'
+    date_str = event.get(
+        "date", datetime.now().strftime("%Y-%m-%d")
+    )  # Default to today's date
+
+    if step == "transform":
+        result = process_data(date_str)
+
+    return {"statusCode": 200, "body": json.dumps({"message": result})}
+
+
+def parse_lambda_arguments(event):
+    # Example function to parse arguments from the event
+    class Args:
+        def __init__(self, step=None, t=None):
+            self.step = step
+            self.t = t
+
+    return Args(step=event.get("step"), t=event.get("t"))
+
+
+def lambda_handler(event, context):
+    cmd_arg = parse_lambda_arguments(event)
+    if cmd_arg.t:
+        cmd_arg.t = datetime.datetime.strptime(cmd_arg.t, "%Y-%m-%d")
+    else:
+        cmd_arg.t = datetime.datetime.now(datetime.timezone.utc)
+
+    config = init_config()
+    init_logger(config, cmd_arg)
+    logger.info(f"Running main.py [{cmd_arg.step}] in directory: {os.getcwd()} ")
+    ymdh = ts_to_ymdh(cmd_arg.t)
+    config["ymdh"] = ymdh
+
+    if cmd_arg.step == "transform":
+        backend_processing(cmd_arg, config)
+    elif cmd_arg.step == "analysis":
+        backend_analysis(cmd_arg, config)
+
+    logger.info("[main] EXITING.")
+
+    return {"statusCode": 200, "body": json.dumps({"message": "Execution completed"})}
 
 
 # USAGE FOR TESTING:
