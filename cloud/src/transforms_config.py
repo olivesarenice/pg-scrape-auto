@@ -17,13 +17,9 @@ class TransformConfig:
         TransformStep
     ]  # This is a list of of steps dictating transformation functions to be applied to the intermediate table
     dest_table_name: str  # This is the name of the destination table (saved in s3)
-    dest_parquet: (
-        dict  # These are the columns to keep in the destination table (saved in s3)
-    )
+    dest_parquet: dict
+    dest_bq: dict
     primary_key: Optional[list] = None
-    RDS_varchar: Optional[dict] = (
-        None  # only for varchar columns. Trim the string to this length
-    )
 
 
 listings_config = TransformConfig(
@@ -31,7 +27,7 @@ listings_config = TransformConfig(
         TransformStep(
             transform_fn=transforms.add_ts,
             input_cols=[],
-            output_cols=["partition_ts"],
+            output_cols=["transform_ts"],
         ),
         TransformStep(
             transform_fn=transforms.clean_floorarea,
@@ -81,20 +77,21 @@ listings_config = TransformConfig(
     ],
     dest_table_name="listings",
     dest_parquet={
-        "id": "Int32",
-        "partition_ts": "datetime64[ns]",
+        "id": "int_string",
+        "transform_ts": "datetime64[ms]",
+        "partition_ts": "datetime64[ms]",
         "name": "string",
         "property_segment": "string",
         "property_type": "string",
-        "project": "string",
-        "is_new_project": "string",
+        "project": "int_string",
+        "is_new_project": "int_string",
         "developer": "string",
         "price": "Int32",
         "floor_area": "Int32",
         "psf": "Int32",
-        "bedrooms": "string",
-        "bathrooms": "string",
-        "is_turbo_listing": "string",
+        "bedrooms": "Int32",
+        "bathrooms": "Int32",
+        "is_turbo_listing": "int_string",
         "district": "string",
         "district_code": "string",
         "region": "string",
@@ -109,7 +106,39 @@ listings_config = TransformConfig(
         "mrt_nearest": "string",
         "mrt_walk_time_min": "Int32",
         "mrt_distance_m": "Int32",
-        "listing_created_after": "datetime64[ns]",
+        "listing_created_after": "datetime64[ms]",
     },
-    primary_key=["id, device_name_unnest"],
+    dest_bq={
+        "id": "STRING",
+        "transform_ts": "TIMESTAMP",
+        "partition_ts": "TIMESTAMP",
+        "name": "STRING",
+        "property_segment": "STRING",
+        "property_type": "STRING",
+        "project": "STRING",
+        "is_new_project": "STRING",
+        "developer": "STRING",
+        "price": "INTEGER",
+        "floor_area": "INTEGER",
+        "psf": "INTEGER",
+        "bedrooms": "INTEGER",
+        "bathrooms": "INTEGER",
+        "is_turbo_listing": "STRING",
+        "district": "STRING",
+        "district_code": "STRING",
+        "region": "STRING",
+        "region_code": "STRING",
+        "search_type": "STRING",
+        "url": "STRING",
+        "title": "STRING",
+        "address": "STRING",
+        "agent_id": "STRING",
+        "agent_name": "STRING",
+        "headline": "STRING",
+        "mrt_nearest": "STRING",
+        "mrt_walk_time_min": "INTEGER",
+        "mrt_distance_m": "INTEGER",
+        "listing_created_after": "TIMESTAMP",
+    },
+    primary_key=["id", "partition_ts"],
 )

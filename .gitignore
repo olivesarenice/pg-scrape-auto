@@ -12,3 +12,5 @@ log/*
 .terraform/
 .env
 .terraform.lock.hcl
+gcp_sa.json
+creds/*

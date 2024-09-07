@@ -6,7 +6,7 @@ from pandasql import sqldf
 def generate_analysis(df):
 
 # APPROACH:: 
-# will need to put data in bigquery and run multiple queries per row required,. tooo may aggregations to do.
+# will need to put data in bigquery and run multiple queries per row required,. tooo may aggregations to do.``
 # for each segment in:
 # - property_type
 # - district_code

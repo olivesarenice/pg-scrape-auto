@@ -10,6 +10,7 @@ import tqdm
 import transforms_config
 from bs4 import BeautifulSoup
 from loguru import logger
+import datetime
 
 
 def parse_summary(html):
@@ -215,10 +216,10 @@ def format_dataframe(
     if rename_schema:
         df.rename(columns=rename_schema, inplace=True)
 
-    # Handle embedding columns separately
-    convert_schema_embed = [k for k, v in convert_schema.items() if v == "array<float>"]
+    # Handle custom formatting separately
+    convert_schema_int_string = [k for k, v in convert_schema.items() if v == "int_string"]
     convert_schema_regular = {
-        k: v for k, v in convert_schema.items() if v != "array<float>"
+        k: v for k, v in convert_schema.items() if v != "int_string"
     }
 
     df1 = df.astype(convert_schema_regular)
@@ -235,8 +236,8 @@ def format_dataframe(
             )
     df2 = df1.astype(convert_schema_regular)
 
-    for c in convert_schema_embed:
-        df2[c] = df2[c].apply(lambda x: np.array(x, dtype=np.float32))
+    for c in convert_schema_int_string:
+        df2[c] = df2[c].astype('Int64').astype('str')
 
     # If we have more columns than specified, remove them
     df2 = df2[[c for c in df2.columns if c in convert_schema.keys()]]
@@ -284,6 +285,96 @@ def retrieve_transform_config(
     transform_config = getattr(transforms_config, f"{table_name}_config")
     return transform_config
 
+from google.cloud import storage
+
+
+
+def upload_to_gcs(blob_name, path_to_file, bucket_name, creds_fp):
+    """ Upload data to a bucket"""
+     
+    # Explicitly use service account credentials by specifying the private key
+    # file.
+    storage_client = storage.Client.from_service_account_json(
+        creds_fp)
+
+    #print(buckets = list(storage_client.list_buckets())
+
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    blob.upload_from_filename(path_to_file)
+    
+    #returns a public url
+    return blob.public_url
+
+from google.cloud import bigquery
+from google.api_core.exceptions import NotFound
+
+def delete_bq_partition(dataset_id, table_id, partition_date, creds_fp):
+    # Initialize a BigQuery client
+    client = bigquery.Client.from_service_account_json(
+    creds_fp)
+    try:
+        client.get_table(f"{dataset_id}.{table_id}")
+    except NotFound:
+        logger.warning("Table does not exist")
+        return False
+    
+    query = f"""
+    SELECT COUNT(*) as row_count FROM `{dataset_id}.{table_id}`
+    WHERE partition_ts = '{partition_date}'
+    """
+
+    # Run the query
+    query_job = client.query(query)
+    row = next(query_job.result())  # Since there's only one row expected
+    print(f"Deleting {row['row_count']} rows in partition {partition_date}...")
+
+    # Construct the SQL DELETE query
+    query = f"""
+    DELETE FROM `{dataset_id}.{table_id}`
+    WHERE partition_ts = '{partition_date}'
+    """
+
+    # Run the query
+    query_job = client.query(query)
+
+    # Wait for the job to complete
+    query_job.result()
+
+    logger.info(f"Deleted rows for {partition_date} from {dataset_id}.{table_id}")
+
+def load_bq_schema(schema_map, pk):
+    schema = []
+    for field_name, field_type in schema_map.items():
+        field_type = schema_map.get(field_name) 
+        if field_name in pk:
+            mode = "REQUIRED"
+        else:
+            mode = "NULLABLE"
+        schema.append(bigquery.SchemaField(field_name, field_type, mode=mode))
+    logger.debug(schema)
+    return schema
+
+def copy_gcs_to_bq(table_id, uri, schema,creds_fp):
+    client = bigquery.Client.from_service_account_json(
+    creds_fp)
+    #table_id = 'your_project.your_dataset.your_table'
+    #uri = 'gs://your-bucket-name/file.parquet'
+    job_config = bigquery.LoadJobConfig(
+        source_format=bigquery.SourceFormat.PARQUET,
+        schema=schema,
+        write_disposition="WRITE_APPEND",
+    )
+
+    load_job = client.load_table_from_uri(
+        uri,
+        table_id,
+        job_config=job_config
+    )
+
+    load_job.result()  # Waits for the job to complete.
+
+    logger.info(f"Loaded {load_job.output_rows} rows into {table_id}.")
 
 def run(cmd_arg, config):
 
@@ -291,24 +382,31 @@ def run(cmd_arg, config):
     y = config["ymdh"]["y"]
     m = config["ymdh"]["m"]
     d = config["ymdh"]["d"]
+    partition_date = f"{y}-{m}-{d}"
     bucket_name = config["s3_bucket"]
     # Download raw and compile
     s3_prefix = f"{config["raw_zip_s3_prefix"]}/{y}/{m}/{d}"
     logger.info(f"Raw data from: {s3_prefix}")
     if not cmd_arg.no_download:
+        logger.info("Re-downloading HTMLs")
         download_htmls(bucket_name, s3_prefix, "data/htmls")
     file_paths = get_file_paths_matching("data/htmls", ".html")
-    df_fp = "data/raw/raw_df.csv"
+    df_fp = "data/raw/raw_df.parquet"
     if not cmd_arg.no_recompile:
+        logger.info("Re-compiling HTMLs into single file")
         df_concat = run_process_listings(file_paths)
-        df_concat.to_csv(df_fp, index=False)
+        df_concat['partition_ts'] = datetime.datetime.strptime(partition_date, "%Y-%m-%d")
+        df_concat.to_parquet(df_fp, index=False)
     else:
-        df_concat = pd.read_csv(df_fp)
+        logger.info("Reading from existing compiled file")
+        df_concat = pd.read_parquet(df_fp)
 
     # Transform and save
-    df_transform = run_transform_df(df_concat, retrieve_transform_config("listings"))
+    transform_config = retrieve_transform_config("listings")
+    df_transform = run_transform_df(df_concat, transform_config)
     parquet_fp = f"data/transformed/df_concat.parquet"
     df_transform.to_parquet(parquet_fp, index=False)
+    logger.debug(df_transform.columns)
 
     # Upload
     s3_client = boto3.client("s3")
@@ -316,4 +414,23 @@ def run(cmd_arg, config):
     s3_client.upload_file(parquet_fp, bucket_name, s3_key)
     logger.info(f"File uploaded successfully to s3://{bucket_name}/{s3_key}")
 
-    # Run analysis
+    # Push to BigQuery
+    
+    
+    # Need to create BQ dataset, GCS bucket, and Service Account for GCS + BQ, download gcs_credentials.json 
+    ## First need to upload to a tmp/ folder in GCS
+    
+    upload_to_gcs(blob_name = s3_key,path_to_file=parquet_fp,bucket_name=config["gcs_bucket"],creds_fp = config["gcs_sa_creds"],)
+
+    bq_schema = load_bq_schema(transform_config.dest_bq, transform_config.primary_key)
+
+    dataset = 'pg_listings'
+    table = 'listings_raw'
+    
+    delete_bq_partition(dataset, table, partition_date, creds_fp = config["gcs_sa_creds"])
+    copy_gcs_to_bq(table_id = "propguru.pg_listings.listings_raw", uri = f"gs://{config["gcs_bucket"]}/{s3_key}", schema = bq_schema, creds_fp = config["gcs_sa_creds"])
+    ## Then call a function to copy over to BQ
+
+
+    # gcs_bucket = 'pg-scrape-auto-tmp'
+

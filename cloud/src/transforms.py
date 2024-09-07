@@ -83,12 +83,9 @@ def is_new_project(
     Default transformation to record when the transform was done for the table
     """
 
-    if "newProject" in df[transform_cols[0]]:
-        val = 1
-    else:
-        val = 0
-
-    df[destination_cols[0]] = val
+    df[destination_cols[0]] = df[transform_cols[0]].apply(
+        lambda x: 0 if x is None else (1 if "newProject" in x else 0)
+    )
 
     return df
 
@@ -102,12 +99,9 @@ def is_turbo(
     Default transformation to record when the transform was done for the table
     """
 
-    if "Turbo" in df[transform_cols[0]]:
-        val = 1
-    else:
-        val = 0
-
-    df[destination_cols[0]] = val
+    df[destination_cols[0]] = df[transform_cols[0]].apply(
+        lambda x: 0 if x is None else (1 if "Turbo" in x else 0)
+    )
 
     return df
 
@@ -226,6 +220,7 @@ def calculate_post_time(
             t_days = round(int(val) * multiple)
             return date - pd.Timedelta(days=t_days)
         else:
+            print("!!!")
             return None
 
     df[destination_cols[0]] = df.apply(

@@ -115,6 +115,8 @@ def ts_to_ymdh(ts):
     return ymdh
 
 
+# USAGE FOR TESTING:
+# python src/main.py -step transform -t 2024-09-04 -no_download -no_recompile
 if __name__ == "__main__":
 
     cmd_arg = parse_cmd_arguments()
