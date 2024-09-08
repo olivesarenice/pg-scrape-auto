@@ -37,3 +37,32 @@ resource "aws_iam_user_policy_attachment" "localmachine_policy_attachment" {
 resource "aws_iam_access_key" "localmachine_user_key" {
   user = aws_iam_user.localmachine.name
 }
+
+
+# Define IAM role for Lambda execution
+resource "aws_iam_role" "lambda_role" {
+  name = "pg-scrape-auto-lambda"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+# Attach the basic Lambda execution policy to the role
+resource "aws_iam_role_policy_attachment" "lambda_execution" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+resource "aws_iam_role_policy_attachment" "lambda_s3" { # From the iam.tf definition
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.localmachine_s3_policy.arn
+}

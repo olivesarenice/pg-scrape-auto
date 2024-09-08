@@ -3,22 +3,26 @@ from __future__ import annotations
 import argparse
 import ast
 import datetime
+import json
 import os
+import shutil
 import sys
 import uuid
-import json
-import backend_processing, backend_analysis
-import transforms_config
+
+import backend_analysis
+import backend_processing
+import boto3
 import transforms
+import transforms_config
 import yaml
 from dotenv import load_dotenv
 from loguru import logger
-import boto3
 
 
 def init_config() -> dict:
-    with open("src/config.yaml", "r") as file:
+    with open("config.yaml", "r") as file:
         config = yaml.safe_load(file)
+    logger.info(config)
     return config
 
 
@@ -50,17 +54,17 @@ def init_logger(config, cmd_arg) -> None:
         "day=" + day,
         logfile_name,
     )
-
     # Create a logger instance
     logger.remove()  # Remove default handler
     # logger.add(lambda msg: S3Handler(config['s3_log_bucket'], logfile).write(msg), format="{message}", level=log_level)
     logger.add(sys.stdout, format="{time} | {level} | {message} ", level=log_level)
-    logger.add(
-        local_logfile,
-        format="{time} | {level} | {message}",
-        level=log_level,
-        rotation="50 MB",
-    )
+    if cmd_arg.is_local:
+        logger.add(
+            local_logfile,
+            format="{time} | {level} | {message}",
+            level=log_level,
+            rotation="50 MB",
+        )
     # You can set the global logger if needed, but it's better to return or use the instance directly
     return logger
 
@@ -71,8 +75,16 @@ def parse_cmd_arguments() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(desc)
     parser.add_argument(
+        "-is_local",
+        action="store_true",
+        default=False,
+        dest="is_local",
+        help="By default, assumes that script is run in Lambda and uses Lambda file pathing",
+    )
+    parser.add_argument(
         "-no_download",
         action="store_true",
+        default=False,
         dest="no_download",
         help="If specified, disables downloading.",
     )
@@ -81,6 +93,7 @@ def parse_cmd_arguments() -> argparse.Namespace:
     parser.add_argument(
         "-no_recompile",
         action="store_true",
+        default=False,
         dest="no_recompile",
         help="If specified, disables recompiling.",
     )
@@ -100,6 +113,7 @@ def parse_cmd_arguments() -> argparse.Namespace:
         help="Step to run",
     )
     known_arg, unknown_arg = parser.parse_known_args()
+    logger.info(known_arg)
     return known_arg
 
 
@@ -115,29 +129,47 @@ def ts_to_ymdh(ts):
     return ymdh
 
 
-def lambda_handler(event, context):
-    step = event.get("step", "transform")  # Default to 'transform'
-    date_str = event.get(
-        "date", datetime.now().strftime("%Y-%m-%d")
-    )  # Default to today's date
-
-    if step == "transform":
-        result = process_data(date_str)
-
-    return {"statusCode": 200, "body": json.dumps({"message": result})}
-
-
 def parse_lambda_arguments(event):
     # Example function to parse arguments from the event
     class Args:
-        def __init__(self, step=None, t=None):
+        def __init__(
+            self,
+            step=None,
+            t=None,
+            is_local=False,
+            no_download=False,
+            no_recompile=False,
+        ):
             self.step = step
             self.t = t
+            self.is_local = is_local
+            self.no_download = no_download
+            self.no_recompile = no_recompile
 
-    return Args(step=event.get("step"), t=event.get("t"))
+    return Args(
+        step=event.get("step"),
+        t=event.get("t"),
+        is_local=False,
+        no_download=False,
+        no_recompile=False,
+    )
 
 
 def lambda_handler(event, context):
+
+    # Directory path
+    dir_paths = [
+        "/tmp/data/htmls",
+        "/tmp/data/raw",
+        "/tmp/data/transformed",
+    ]
+
+    # Create the directory if it doesn't exist
+    for dir_path in dir_paths:
+        if os.path.exists(dir_path):
+            shutil.rmtree(dir_path)
+        os.makedirs(dir_path, exist_ok=True)
+
     cmd_arg = parse_lambda_arguments(event)
     if cmd_arg.t:
         cmd_arg.t = datetime.datetime.strptime(cmd_arg.t, "%Y-%m-%d")
@@ -151,9 +183,9 @@ def lambda_handler(event, context):
     config["ymdh"] = ymdh
 
     if cmd_arg.step == "transform":
-        backend_processing(cmd_arg, config)
+        backend_processing.run(cmd_arg, config)
     elif cmd_arg.step == "analysis":
-        backend_analysis(cmd_arg, config)
+        backend_analysis.run(cmd_arg, config)
 
     logger.info("[main] EXITING.")
 

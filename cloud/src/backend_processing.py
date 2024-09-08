@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import re
@@ -10,7 +11,6 @@ import tqdm
 import transforms_config
 from bs4 import BeautifulSoup
 from loguru import logger
-import datetime
 
 
 def parse_summary(html):
@@ -160,22 +160,27 @@ def process_file(html_fp):
     # joined_df.to_csv(f"tmp/data/tmp/{file_name}_joined.csv", index=False)
     return joined_df
 
-
 def download_htmls(bucket_name, s3_prefix, dest_dir):
     s3_client = boto3.client("s3")
 
-    # Create local directory if it doesn't exist
-    if not os.path.exists(dest_dir):
-        os.makedirs(local_dir)
-
     # List objects in the specified S3 prefix
     response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=s3_prefix)
-
+    
     if "Contents" not in response:
         raise ValueError("No files found with the given prefix.")
 
+    # Delete the files in the local dir
+    n_removed = 0
+    for file_name in os.listdir(dest_dir):
+        file_path = os.path.join(dest_dir, file_name)
+        if os.path.isfile(file_path) and not file_name.startswith("."):
+            os.remove(file_path)
+            n_removed += 1
+    logger.info(f"Emptied {n_removed} files from {dest_dir}")
+    
+    # Saving files
     file_paths = []
-
+    logger.info("Unzipping files")
     for obj in response["Contents"]:
         key = obj["Key"]
         if key.endswith(".zip"):
@@ -288,7 +293,6 @@ def retrieve_transform_config(
 from google.cloud import storage
 
 
-
 def upload_to_gcs(blob_name, path_to_file, bucket_name, creds_fp):
     """ Upload data to a bucket"""
      
@@ -306,8 +310,9 @@ def upload_to_gcs(blob_name, path_to_file, bucket_name, creds_fp):
     #returns a public url
     return blob.public_url
 
-from google.cloud import bigquery
 from google.api_core.exceptions import NotFound
+from google.cloud import bigquery
+
 
 def delete_bq_partition(dataset_id, table_id, partition_date, creds_fp):
     # Initialize a BigQuery client
@@ -327,7 +332,7 @@ def delete_bq_partition(dataset_id, table_id, partition_date, creds_fp):
     # Run the query
     query_job = client.query(query)
     row = next(query_job.result())  # Since there's only one row expected
-    print(f"Deleting {row['row_count']} rows in partition {partition_date}...")
+    logger.info(f"Deleting {row['row_count']} rows in partition {partition_date}...")
 
     # Construct the SQL DELETE query
     query = f"""
@@ -378,6 +383,11 @@ def copy_gcs_to_bq(table_id, uri, schema,creds_fp):
 
 def run(cmd_arg, config):
 
+    if cmd_arg.is_local:
+        absolute_path = ""
+    else:
+        absolute_path = "/"
+    
     bucket_name = config["s3_bucket"]
     y = config["ymdh"]["y"]
     m = config["ymdh"]["m"]
@@ -389,9 +399,9 @@ def run(cmd_arg, config):
     logger.info(f"Raw data from: {s3_prefix}")
     if not cmd_arg.no_download:
         logger.info("Re-downloading HTMLs")
-        download_htmls(bucket_name, s3_prefix, "tmp/data/htmls")
-    file_paths = get_file_paths_matching("tmp/data/htmls", ".html")
-    df_fp = "tmp/data/raw/raw_df.parquet"
+        download_htmls(bucket_name, s3_prefix, f"{absolute_path}tmp/data/htmls")
+    file_paths = get_file_paths_matching(f"{absolute_path}tmp/data/htmls", ".html")
+    df_fp = f"{absolute_path}tmp/data/raw/raw_df.parquet"
     if not cmd_arg.no_recompile:
         logger.info("Re-compiling HTMLs into single file")
         df_concat = run_process_listings(file_paths)
@@ -404,7 +414,7 @@ def run(cmd_arg, config):
     # Transform and save
     transform_config = retrieve_transform_config("listings")
     df_transform = run_transform_df(df_concat, transform_config)
-    parquet_fp = f"tmp/data/transformed/df_concat.parquet"
+    parquet_fp = f"{absolute_path}tmp/data/transformed/df_concat.parquet"
     df_transform.to_parquet(parquet_fp, index=False)
     logger.debug(df_transform.columns)
 

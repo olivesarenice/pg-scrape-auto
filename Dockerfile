@@ -1,7 +1,7 @@
 
 
 # Use the official AWS Lambda Python base image
-FROM --platform=arm64 public.ecr.aws/lambda/python:3.12
+FROM public.ecr.aws/lambda/python:3.12
 
 # Set the working directory in the container
 WORKDIR /var/task
@@ -14,7 +14,9 @@ COPY pyproject.toml poetry.lock* ./
 RUN poetry config virtualenvs.create false && poetry install --no-dev
 
 # Copy the Lambda function code into the container
-COPY cloud/ ./
-WORKDIR /var/task/cloud
+COPY cloud/src ./
+RUN rm -rf /var/task/tmp/
+
+COPY cloud/src/tmp  /tmp
 # Command to run the Lambda function
-CMD ["src.main.lambda_handler"]
+CMD ["main.lambda_handler"]

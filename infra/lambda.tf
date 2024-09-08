@@ -1,33 +1,5 @@
-# Define IAM role for Lambda execution
-resource "aws_iam_role" "lambda_role" {
-  name = "pg-scrape-auto-lambda"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      },
-    ]
-  })
-}
-
-# Attach the basic Lambda execution policy to the role
-resource "aws_iam_role_policy_attachment" "lambda_execution" {
-  role       = aws_iam_role.lambda_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-resource "aws_iam_role_policy_attachment" "lambda_s3" { # From the iam.tf definition
-  role       = aws_iam_role.lambda_role.name
-  policy_arn = aws_iam_policy.localmachine_s3_policy.arn
-}
-
 # Define the Lambda function
-resource "aws_lambda_function" "lambda" {
+resource "aws_lambda_function" "transform" {
   function_name = "pg-scrape-auto-lambda"
 
   # Reference the Docker image stored in ECR
@@ -38,12 +10,19 @@ resource "aws_lambda_function" "lambda" {
   # Set the Lambda function to use the Docker image
   package_type = "Image"
 
-  # Optionally, define memory size and timeout
-  memory_size = 1024
-  timeout     = 600
+  # Define memory size (in MB)
+  memory_size = 3008 # Set your desired memory size (e.g., 2048 MB)
+
+  # Define function timeout (in seconds)
+  timeout = 900 # Set your desired timeout (e.g., 600 seconds)
+
+  # Define ephemeral storage (in MB)
+  ephemeral_storage {
+    size = 2048 # Set your desired ephemeral storage size (e.g., 2048 MB)
+  }
 }
 
 # Output the Lambda function ARN
 output "lambda_function_arn" {
-  value = aws_lambda_function.lambda.arn
+  value = aws_lambda_function.transform.arn
 }

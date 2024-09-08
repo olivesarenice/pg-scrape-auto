@@ -1,5 +1,5 @@
 log_level: "INFO"
-local_log_dir: "tmp/logs"
+local_log_dir: "../tmp/logs"
 s3_bucket: "pg-scrape-auto"
 gcs_bucket: "pg-scrape-auto-tmp"
 gcs_sa_creds: "creds/gcp_sa.json"
