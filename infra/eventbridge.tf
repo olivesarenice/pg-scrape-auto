@@ -1,8 +1,8 @@
 # Define the EventBridge rule
 resource "aws_cloudwatch_event_rule" "daily_transform" {
   name                = "pg-scrape-auto-daily-transform"
-  description         = "Triggers the Lambda function daily at 15:00 UTC"
-  schedule_expression = "cron(0 15 * * ? *)" # Cron expression for 15:00 UTC daily
+  description         = "Triggers the Lambda function daily at 17:00 UTC"
+  schedule_expression = "cron(0 17 * * ? *)" # Cron expression for 17:00 UTC daily
 }
 
 # Define the Lambda function target for the EventBridge rule
