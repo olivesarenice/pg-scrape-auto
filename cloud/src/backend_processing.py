@@ -11,7 +11,7 @@ import tqdm
 import transforms_config
 from bs4 import BeautifulSoup
 from loguru import logger
-
+import util_alert
 
 def parse_summary(html):
 
@@ -399,7 +399,12 @@ def run(cmd_arg, config):
     logger.info(f"Raw data from: {s3_prefix}")
     if not cmd_arg.no_download:
         logger.info("Re-downloading HTMLs")
-        download_htmls(bucket_name, s3_prefix, f"{absolute_path}tmp/data/htmls")
+        try: 
+            download_htmls(bucket_name, s3_prefix, f"{absolute_path}tmp/data/htmls")
+        except Exception as e:
+            logger.error(e)
+            util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.download', partition_date, 'ERROR' ,e)
+            exit(1)
     file_paths = get_file_paths_matching(f"{absolute_path}tmp/data/htmls", ".html")
     df_fp = f"{absolute_path}tmp/data/raw/raw_df.parquet"
     if not cmd_arg.no_recompile:
@@ -413,7 +418,12 @@ def run(cmd_arg, config):
 
     # Transform and save
     transform_config = retrieve_transform_config("listings")
-    df_transform = run_transform_df(df_concat, transform_config)
+    try:
+        df_transform = run_transform_df(df_concat, transform_config)
+    except Exception as e:
+        logger.error(e)
+        util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.transform_df', partition_date, 'ERROR' ,e)
+        exit(1)
     parquet_fp = f"{absolute_path}tmp/data/transformed/df_concat.parquet"
     df_transform.to_parquet(parquet_fp, index=False)
     logger.debug(df_transform.columns)
@@ -421,7 +431,12 @@ def run(cmd_arg, config):
     # Upload
     s3_client = boto3.client("s3")
     s3_key = f"{config["transformed_s3_prefix"]}/{y}/{m}/{d}/df.parquet"
-    s3_client.upload_file(parquet_fp, bucket_name, s3_key)
+    try:
+        s3_client.upload_file(parquet_fp, bucket_name, s3_key)
+    except Exception as e:
+        logger.error(e)
+        util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.upload', partition_date, 'ERROR' ,e)
+        exit(1)
     logger.info(f"File uploaded successfully to s3://{bucket_name}/{s3_key}")
 
     # Push to BigQuery
@@ -429,16 +444,20 @@ def run(cmd_arg, config):
     
     # Need to create BQ dataset, GCS bucket, and Service Account for GCS + BQ, download gcs_credentials.json 
     ## First need to upload to a tmp/ folder in GCS
-    
-    upload_to_gcs(blob_name = s3_key,path_to_file=parquet_fp,bucket_name=config["gcs_bucket"],creds_fp = config["gcs_sa_creds"],)
+    try:
+        upload_to_gcs(blob_name = s3_key,path_to_file=parquet_fp,bucket_name=config["gcs_bucket"],creds_fp = config["gcs_sa_creds"],)
 
-    bq_schema = load_bq_schema(transform_config.dest_bq, transform_config.primary_key)
+        bq_schema = load_bq_schema(transform_config.dest_bq, transform_config.primary_key)
 
-    dataset = 'pg_listings'
-    table = 'listings_raw'
-    
-    delete_bq_partition(dataset, table, partition_date, creds_fp = config["gcs_sa_creds"])
-    copy_gcs_to_bq(table_id = "propguru.pg_listings.listings_raw", uri = f"gs://{config["gcs_bucket"]}/{s3_key}", schema = bq_schema, creds_fp = config["gcs_sa_creds"])
+        dataset = 'pg_listings'
+        table = 'listings_raw'
+        
+        delete_bq_partition(dataset, table, partition_date, creds_fp = config["gcs_sa_creds"])
+        copy_gcs_to_bq(table_id = "propguru.pg_listings.listings_raw", uri = f"gs://{config["gcs_bucket"]}/{s3_key}", schema = bq_schema, creds_fp = config["gcs_sa_creds"])
+    except Exception as e:
+        logger.error(e)
+        util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.bq', partition_date, 'ERROR' ,e)
+        exit(1)
     ## Then call a function to copy over to BQ
 
 

@@ -1,4 +1,5 @@
 log_level: "INFO"
+job: "pg-scrape-auto"
 local_log_dir: "../tmp/logs"
 s3_bucket: "pg-scrape-auto"
 gcs_bucket: "pg-scrape-auto-tmp"
