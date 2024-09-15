@@ -9,6 +9,7 @@ import shutil
 import sys
 import uuid
 
+import analyses_config
 import backend_analysis
 import backend_processing
 import boto3
@@ -105,6 +106,13 @@ def parse_cmd_arguments() -> argparse.Namespace:
         help="Date in YYYY-MM-DD UTC to run for. Will look at the partition for this date.",
     ),
     parser.add_argument(
+        "-t1",
+        action="store",
+        type=str,
+        dest="t1",
+        help="Only for analysis, if intending to bulk run analysis across t > t1 dates inclusive",
+    ),
+    parser.add_argument(
         "-step",
         action="store",
         type=str,
@@ -136,12 +144,14 @@ def parse_lambda_arguments(event):
             self,
             step=None,
             t=None,
+            t1=None,
             is_local=False,
             no_download=False,
             no_recompile=False,
         ):
             self.step = step
             self.t = t
+            self.t1 = t1
             self.is_local = is_local
             self.no_download = no_download
             self.no_recompile = no_recompile
@@ -149,6 +159,7 @@ def parse_lambda_arguments(event):
     return Args(
         step=event.get("step"),
         t=event.get("t"),
+        t1=event.get("t1"),
         is_local=False,
         no_download=False,
         no_recompile=False,
@@ -176,6 +187,11 @@ def lambda_handler(event, context):
     else:
         cmd_arg.t = datetime.datetime.now(datetime.timezone.utc)
 
+    if cmd_arg.t1:
+        cmd_arg.t1 = datetime.datetime.strptime(
+            cmd_arg.t1, "%Y-%m-%d"
+        )  # t1 is not used for transform
+
     config = init_config()
     init_logger(config, cmd_arg)
     logger.info(f"Running main.py [{cmd_arg.step}] in directory: {os.getcwd()} ")
@@ -201,6 +217,11 @@ if __name__ == "__main__":
         cmd_arg.t = datetime.datetime.strptime(cmd_arg.t, "%Y-%m-%d")
     else:
         cmd_arg.t = datetime.datetime.now(datetime.UTC)
+
+    if cmd_arg.t1:
+        cmd_arg.t1 = datetime.datetime.strptime(
+            cmd_arg.t1, "%Y-%m-%d"
+        )  # t1 is not used for transform
 
     config = init_config()
     init_logger(config, cmd_arg)
