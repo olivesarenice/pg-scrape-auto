@@ -20,7 +20,9 @@ resource "aws_iam_policy" "localmachine_s3_policy" {
         ]
         Resource = [
           "arn:aws:s3:::pg-scrape-auto",
-          "arn:aws:s3:::pg-scrape-auto/*"
+          "arn:aws:s3:::pg-scrape-auto/*",
+          "arn:aws:s3:::oliverqsw-site-975050318877/external/public_datasets/pg-scrape-auto/",
+          "arn:aws:s3:::oliverqsw-site-975050318877/external/public_datasets/pg-scrape-auto/*"
         ]
       }
     ]

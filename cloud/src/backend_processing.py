@@ -439,6 +439,17 @@ def run(cmd_arg, config):
         exit(1)
     logger.info(f"File uploaded successfully to s3://{bucket_name}/{s3_key}")
 
+    # Also upload to the public data store
+    csv_fp = f"{absolute_path}tmp/data/transformed/df_concat.csv"
+    df_transform.to_csv(csv_fp, index=False)
+    public_s3_bucket = config["public_s3_bucket"]
+    public_s3_key = config["public_s3_key"]
+    try:
+        s3_client.upload_file(csv_fp, public_s3_bucket, f"{public_s3_key}/latest_daily.csv")
+    except Exception as e:
+        logger.error(e)
+        util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.upload', partition_date, 'ERROR' ,e)
+    logger.info(f"File uploaded successfully to s3://{public_s3_bucket}/{public_s3_key}")
     # Push to BigQuery
     
     
