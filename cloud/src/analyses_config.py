@@ -13,6 +13,7 @@ agg_stats_filter_group_config = AnalysisConfig(
     dest_table="agg_stats_filter_group",
     dest_bq={
         "partition_ts": "TIMESTAMP",
+        "dt": "DATE",
         "filter_code": "STRING",
         "filter_description": "STRING",
         "day_active_listings": "INTEGER",  # Change to "FLOAT64" if it's a float
@@ -76,6 +77,7 @@ day_25_q as (SELECT PERCENTILE_CONT(price, 0.25)  OVER() as day_25_q FROM ytd_re
 day_75_q as (SELECT PERCENTILE_CONT(price, 0.75) OVER() as day_75_q FROM ytd_records LIMIT 1)
 SELECT 
     CAST('{partition_date}' AS TIMESTAMP) as partition_ts,
+    CAST('{partition_date}' AS DATE) as dt,
     '{filter_code}' as filter_code,
     '{filter_description}' as filter_description,
     (SELECT day_active_listings.day_active_listings FROM day_active_listings LIMIT 1) AS day_active_listings,
