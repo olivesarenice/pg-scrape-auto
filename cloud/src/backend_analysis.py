@@ -10,6 +10,8 @@ from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
 from loguru import logger
 
+# V0 ANALYSIS #
+
 
 def sql_escaping(list_as_str: str) -> str:
     # Converts a list string like 1,2,3 into '1','2','3'
@@ -58,24 +60,6 @@ AND {filter3_c} IN ({filter3_v})"""
     return filters
 
 
-def bq_execute_query(sql, dataset_id, table_id, creds_fp):
-    # Initialize a BigQuery client
-    client = bigquery.Client.from_service_account_json(creds_fp)
-    try:
-        client.get_table(f"{dataset_id}.{table_id}")
-    except NotFound:
-        logger.warning("Table does not exist")
-        return False
-
-    # Run the query
-    query_job = client.query(sql)
-    res = query_job.result()
-    df = res.to_dataframe()
-    # logger.info(f"Retrieved {len(df)} rows")
-    # print(df)
-    return df
-
-
 def execute_for_filter(params):
     f = params["filter"]
     bq_d = params["bq_d"]
@@ -96,11 +80,50 @@ def execute_for_filter(params):
     return row
 
 
+# V1 ANALYSIS VIZ-GROUP#
+
+
+def execute_for_sql(params):
+    bq_d = params["bq_d"]
+    full_sql = bq_d["sql_template"].format(
+        partition_date=bq_d["partition_date"],
+        first_partition_date=params["first_partition_date"],
+    )
+    pprint(full_sql)
+    # logger.info(f"Execute for code: {f['code']}")
+    row = bq_execute_query(
+        full_sql,
+        dataset_id=bq_d["dataset"],
+        table_id=bq_d["table"],
+        creds_fp=bq_d["creds_fp"],
+    )
+    return row
+
+
+# HELPER BQ #
 def retrieve_analysis_config(
     table_name: str,
 ) -> analyses_config.AnalysisConfig:
     analysis_config = getattr(analyses_config, f"{table_name}_config")
     return analysis_config
+
+
+def bq_execute_query(sql, dataset_id, table_id, creds_fp):
+    # Initialize a BigQuery client
+    client = bigquery.Client.from_service_account_json(creds_fp)
+    try:
+        client.get_table(f"{dataset_id}.{table_id}")
+    except NotFound:
+        logger.warning("Table does not exist")
+        return False
+
+    # Run the query
+    query_job = client.query(sql)
+    res = query_job.result()
+    df = res.to_dataframe()
+    # logger.info(f"Retrieved {len(df)} rows")
+    # print(df)
+    return df
 
 
 def bq_insert_df(df, dataset_id, table_id, schema, creds_fp):
@@ -138,8 +161,8 @@ def run(cmd_arg, config):
 
         logger.info(f"Running for partition dates: {date_list}")
 
-        analysis_config = retrieve_analysis_config("agg_stats_filter_group")
-        filters = parse_filter_csv("filter_table.csv")
+        analysis_config = retrieve_analysis_config("agg_viz_group")
+        # filters = parse_filter_csv("filter_table.csv") # Not needed for V1
         for partition_date in date_list:
             dataset = config["bq_dataset"]
             table = config["bq_raw_table"]
@@ -151,34 +174,40 @@ def run(cmd_arg, config):
                 "table": table,
                 "partition_date": partition_date,
                 "creds_fp": creds_fp,
-                "sql_template": analyses_config.SQL_AGG_STATISTICS_FILTER_GROUP,  # TODO: move this into a SQL attribute of the config if there are more
+                "sql_template": analyses_config.SQL_AGG_VIZ_GROUP,  # TODO: move this into a SQL attribute of the config if there are more
             }
 
-            # Prepare the params list
-            params_ls = []
-            for f in filters:
-                params = {}
-                params["filter"] = f
-                params["bq_d"] = bq_d
-                params_ls.append(params)
+            # Prepare the params list # This is only for the old agg sqls
+            # params_ls = []
+            # for f in filters:
+            #     params = {}
+            #     params["filter"] = f
+            #     params["bq_d"] = bq_d
+            #     params_ls.append(params)
 
-            # Excecute in parallel
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                # Submit tasks and get futures
-                futures = [
-                    executor.submit(execute_for_filter, params) for params in params_ls
-                ]
+            # # Excecute in parallel
+            # with concurrent.futures.ThreadPoolExecutor() as executor:
+            #     # Submit tasks and get futures
+            #     futures = [
+            #         executor.submit(execute_for_filter, params) for params in params_ls
+            #     ]
 
-                # Collect results as they complete
-                results = []
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        result = future.result()
-                        results.append(result)
-                    except Exception as exc:
-                        logger.error(f"Generated an exception: {exc}")
+            # # Collect results as they complete
+            # results = []
+            # for future in concurrent.futures.as_completed(futures):
+            #         try:
+            #             result = future.result()
+            #             results.append(result)
+            #         except Exception as exc:
+            #             logger.error(f"Generated an exception: {exc}")
+            # df_partition = pd.concat(results)
 
-            df_partition = pd.concat(results)
+            params = {
+                "bq_d": bq_d,
+                "first_partition_date": "2024-09-03",
+            }
+            result = execute_for_sql(params)
+            df_partition = result
 
             logger.info(
                 f"Attempting delete of {dataset}.{analysis_table} partition: {partition_date}"

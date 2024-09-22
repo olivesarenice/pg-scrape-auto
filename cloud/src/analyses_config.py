@@ -94,3 +94,176 @@ SELECT
     (SELECT day_75_q.day_75_q FROM day_75_q LIMIT 1) AS day_75_q
 
 """
+
+
+agg_viz_group_config = AnalysisConfig(
+    dest_table="agg_viz_group",
+    dest_bq={
+        "partition_ts": "TIMESTAMP",
+        "dt": "DATE",
+        "region": "STRING",
+        "viz_group_code": "STRING",
+        "listings": "INTEGER",
+        "median_psf": "FLOAT64",
+        "p25_psf": "FLOAT64",
+        "p75_psf": "FLOAT64",
+        "median_lifetime": "FLOAT64",
+        "p25_lifetime": "FLOAT64",
+        "p75_lifetime": "FLOAT64",
+    },
+    primary_key=["dt", "region", "viz_group_code"],
+)
+
+
+SQL_AGG_VIZ_GROUP = """
+
+WITH w_labels AS (
+  SELECT
+    lr.id,
+    lr.partition_ts,
+    lr.psf,
+    COALESCE(lr.region,dr.region) AS region,    
+    CASE 
+        WHEN property_type = '1/2 ROOM HDB' THEN 'AH2'
+        WHEN property_type = '3 ROOM HDB' THEN 'AH3'
+        WHEN property_type = '4 ROOM HDB' THEN 'AH4'
+        WHEN property_type = '5 ROOM HDB' THEN 'AH5'
+        WHEN property_type = 'OTHER HDB' THEN 'AH0'
+        
+        WHEN property_segment = 'Non-Landed' AND bedrooms <= 1 THEN 'AN1'
+        WHEN property_segment = 'Non-Landed' AND bedrooms = 2 THEN 'AN2'
+        WHEN property_segment = 'Non-Landed' AND bedrooms = 3 THEN 'AN3'
+        WHEN property_segment = 'Non-Landed' AND bedrooms = 4 THEN 'AN4'
+        WHEN property_segment = 'Non-Landed' AND bedrooms >= 5 THEN 'AN5'
+
+        WHEN property_type = 'Terraced House' THEN 'AL1'
+        WHEN property_type IN ('Semi-Detached House', 'Corner Terrace') THEN 'AL2'
+        WHEN property_type IN ('Detached House', 'Good Class Bungalow', 'Bungalow House') THEN 'AL3'
+        
+        ELSE 'NA' -- Default case for any unmatched criteria
+    END AS viz_group_code
+FROM
+    pg_listings.listings_raw lr
+LEFT JOIN
+    pg_listings.ref_districtcode_region dr
+ON lr.district_code = dr.district_code
+),
+r_lifetime_id AS (
+    SELECT
+        id,
+        viz_group_code,region,
+        MIN(partition_ts) as first_date,
+        MAX(partition_ts) as last_date,
+        DATE_DIFF(MAX(partition_ts), MIN(partition_ts),day) as lifetime
+    FROM
+        w_labels
+    WHERE partition_ts <= '{partition_date}' -- The partition date we are calculating for
+    AND partition_ts >= '{first_partition_date}' -- Start date of all valid data
+    group by id, viz_group_code, region
+),
+r_lifetime_pct AS (
+  SELECT viz_group_code,region, PERCENTILE_CONT(lifetime, 0.5) OVER (PARTITION BY viz_group_code, region) AS median_lifetime,
+  PERCENTILE_CONT(lifetime, 0.25) OVER (PARTITION BY viz_group_code, region) AS p25_lifetime,
+  PERCENTILE_CONT(lifetime, 0.75) OVER (PARTITION BY viz_group_code, region) AS p75_lifetime
+  FROM r_lifetime_id
+  -- WHERE last_date != '{partition_date}' -- This limits the scope to only listings that are already removed i.e. 'sold'
+),
+r_lifetime_final AS (
+  SELECT viz_group_code, region,
+  MAX(median_lifetime) AS median_lifetime, 
+  MAX(p25_lifetime) AS p25_lifetime, 
+  MAX(p75_lifetime) AS p75_lifetime
+  FROM r_lifetime_pct
+  GROUP BY viz_group_code, region
+),
+--SELECT viz_group_code, median_lifetime FROM lifetime_final order by median_lifetime asc
+r_metrics_tmp AS (
+  SELECT viz_group_code, region, id, 
+  PERCENTILE_CONT(psf, 0.5) OVER (PARTITION BY viz_group_code,region) AS median_psf,
+  PERCENTILE_CONT(psf, 0.25) OVER (PARTITION BY viz_group_code, region) AS p25_psf,
+  PERCENTILE_CONT(psf, 0.75) OVER (PARTITION BY viz_group_code, region) AS p75_psf
+  FROM w_labels
+  WHERE partition_ts = '{partition_date}'
+),
+r_metrics AS (
+  SELECT CAST('{partition_date}' AS timestamp) AS partition_ts,
+  CAST('{partition_date}' AS date) AS dt ,  
+  region,
+  viz_group_code,
+  COUNT(id) AS listings,  
+  MAX(median_psf) AS median_psf, 
+  MAX(p25_psf) AS p25_psf,
+  MAX(p75_psf) AS p75_psf,
+  FROM r_metrics_tmp
+  GROUP BY viz_group_code, region
+),
+r_results AS (
+SELECT m.*, l.median_lifetime, l.p25_lifetime, l.p75_lifetime  
+FROM r_metrics m
+LEFT JOIN r_lifetime_final l
+ON m.viz_group_code = l.viz_group_code
+AND m.region = l.region
+WHERE m.viz_group_code != 'NA'),
+lifetime_id AS (
+    SELECT
+        id,
+        viz_group_code,
+        MIN(partition_ts) as first_date,
+        MAX(partition_ts) as last_date,
+        DATE_DIFF(MAX(partition_ts), MIN(partition_ts),day) as lifetime
+    FROM
+        w_labels
+    WHERE partition_ts <= '{partition_date}' -- The partition date we are calculating for
+    AND partition_ts >= '{first_partition_date}'  -- Start date of all valid data
+    group by id, viz_group_code
+),
+lifetime_pct AS (
+  SELECT viz_group_code, PERCENTILE_CONT(lifetime, 0.5) OVER (PARTITION BY viz_group_code) AS median_lifetime,
+  PERCENTILE_CONT(lifetime, 0.25) OVER (PARTITION BY viz_group_code) AS p25_lifetime,
+  PERCENTILE_CONT(lifetime, 0.75) OVER (PARTITION BY viz_group_code) AS p75_lifetime
+  FROM lifetime_id
+  -- WHERE last_date != '{partition_date}' -- This limits the scope to only listings that are already removed i.e. 'sold'
+),
+lifetime_final AS (
+  SELECT viz_group_code, 
+  MAX(median_lifetime) AS median_lifetime, 
+  MAX(p25_lifetime) AS p25_lifetime, 
+  MAX(p75_lifetime) AS p75_lifetime
+  FROM lifetime_pct
+  GROUP BY viz_group_code
+),
+--SELECT viz_group_code, median_lifetime FROM lifetime_final order by median_lifetime asc
+metrics_tmp AS (
+  SELECT viz_group_code, id, 
+  PERCENTILE_CONT(psf, 0.5) OVER (PARTITION BY viz_group_code) AS median_psf,
+  PERCENTILE_CONT(psf, 0.25) OVER (PARTITION BY viz_group_code) AS p25_psf,
+  PERCENTILE_CONT(psf, 0.75) OVER (PARTITION BY viz_group_code) AS p75_psf
+  FROM w_labels
+  WHERE partition_ts = '{partition_date}'
+),
+metrics AS (
+  SELECT CAST('{partition_date}' AS timestamp) AS partition_ts ,
+  CAST('{partition_date}' AS date) AS dt ,
+  'ALL' as region,
+  viz_group_code, 
+  COUNT(id) AS listings,  
+  MAX(median_psf) AS median_psf, 
+  MAX(p25_psf) AS p25_psf,
+  MAX(p75_psf) AS p75_psf,
+  FROM metrics_tmp
+  GROUP BY viz_group_code
+),
+results AS (
+SELECT
+m.*,
+l.median_lifetime, 
+l.p25_lifetime, 
+l.p75_lifetime,
+FROM metrics m
+LEFT JOIN lifetime_final l
+ON m.viz_group_code = l.viz_group_code
+WHERE m.viz_group_code != 'NA')
+(SELECT * FROM results WHERE region IS NOT NULL)
+UNION ALL
+(SELECT * FROM r_results WHERE region IS NOT NULL)
+"""
