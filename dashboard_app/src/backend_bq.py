@@ -43,9 +43,9 @@ SELECT rfg.description ,m.* FROM (
         region,
         viz_group_code,
         median_psf,
-        1 - (median_psf / LAG(median_psf, {N_DAYS}) OVER (PARTITION BY region, viz_group_code ORDER BY dt)) AS psf_pct_delta,
+        (median_psf / LAG(median_psf, {N_DAYS}) OVER (PARTITION BY region, viz_group_code ORDER BY dt)) -1 AS psf_pct_delta,
         listings,
-        1 - (listings / LAG(listings, {N_DAYS}) OVER (PARTITION BY region, viz_group_code ORDER BY dt)) AS listings_pct_delta
+        (listings / LAG(listings, {N_DAYS}) OVER (PARTITION BY region, viz_group_code ORDER BY dt)) -1 AS listings_pct_delta
     FROM 
         propguru.pg_listings.agg_viz_group
 ) as m
