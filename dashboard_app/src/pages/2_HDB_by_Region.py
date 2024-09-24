@@ -5,8 +5,9 @@ import backend_bq
 import numpy as np
 import pandas as pd
 import streamlit as st
+import matplotlib 
 
-N_DAYS = 14
+N_DAYS = 20
 def load_data(is_all_region: bool) -> pd.DataFrame:
     sql_format = backend_bq.SQL_BASIC_METRICS.format(N_DAYS=N_DAYS)
     df_r = backend_bq.bq_execute_query(
@@ -74,22 +75,32 @@ df_r["l_history"] = df_r["listings_history"].apply(lambda x: [i["value"] for i i
 
 # for HDB
 
-types = ["AH2","AH3","AH4","AH5","AH0"]
+segment_code_map = {
+    "HDB": ["AH2","AH3","AH4","AH5","AH0"],
+    "NL": ["AN1","AN2","AN3","AN4","AN5"],
+    "L": ["AL1","AL2","AL3"],
+}
 
-types = ["AN1","AN2","AN3","AN4","AN5"]
+for segment, types in segment_code_map.items():
+    st.markdown("## Median PSF")
+    df_segment = df_r[df_r["viz_group_code"].isin(types)]
+    df_piv = df_segment.pivot_table(index=["region"], columns='description',values="median_psf")
+    max_value = df_piv.max().max()
+    min_value = df_piv.min().min()
+    df_styled = df_piv.style.background_gradient(cmap='bone', subset=df_piv.columns,vmin=min_value, vmax=max_value*2).format(precision=0, thousands=",")
+    st.dataframe(df_styled)
 
-df_hdb = df_r[df_r["viz_group_code"].isin(types)]
+    st.markdown("## Number of listings")
+    df_piv = df_segment.pivot_table(index=["region"], columns='description',values="listings")
+    max_value = df_piv.max().max()
+    min_value = df_piv.min().min()
+    df_styled = df_piv.style.background_gradient(cmap='bone', subset=df_piv.columns,vmin=min_value, vmax=max_value*2).format(precision=0, thousands=",")
+    st.dataframe(df_styled)
 
-df_piv = df_hdb.pivot_table(index=["region"], columns='description',
-                    aggfunc={'median_psf':sum}, fill_value=0)
-st.dataframe(df_piv)
-
-for t in types:
-    with st.container():
-        st.markdown(f"## {t}")
+    st.markdown("## Trends by Type")
+    for t in types:
+        st.markdown(f"### {t}")
         df = df_r[df_r["viz_group_code"] == t]
-
-        
         display_cols = ["region",
                         "median_psf",
                         "psf_pct_delta",

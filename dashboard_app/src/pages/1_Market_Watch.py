@@ -29,11 +29,11 @@ def parse_df_row(row: pd.DataFrame) -> dict:
     row = row.iloc[0]
     row_d = {}
     row_d["description"] = row["description"].split(" | ")[1]
-    row_d["psf"] = f"${str(int(round(row["median_psf"],0)))}"
-    row_d["psf_delta"] = f"{str(round(row["psf_pct_delta"] * 100, 1))}%"
+    row_d["psf"] = f"${int(round(row['median_psf'])):,}"
+    row_d["psf_delta"] = f"{round(row['psf_pct_delta'] * 100, 1)}%"
     row_d["psf_h"] = row["median_psf_history"].tolist()
-    row_d["listing"] = row["listings"]
-    row_d["listing_delta"] = f"{str(round(row["listings_pct_delta"] * 100, 1))}%"
+    row_d["listing"] = f"{row["listings"]:,}"
+    row_d["listing_delta"] = f"{round(row["listings_pct_delta"] * 100, 1)}%"
     row_d["listing_h"] = row["listings_history"].tolist()
     return row_d
 
