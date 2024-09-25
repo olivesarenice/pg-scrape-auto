@@ -122,6 +122,7 @@ WITH w_labels AS (
     lr.id,
     lr.partition_ts,
     lr.psf,
+    lr.price,
     COALESCE(lr.region,dr.region) AS region,    
     CASE 
         WHEN property_type = '1/2 ROOM HDB' THEN 'AH2'
@@ -181,7 +182,10 @@ r_metrics_tmp AS (
   SELECT viz_group_code, region, id, 
   PERCENTILE_CONT(psf, 0.5) OVER (PARTITION BY viz_group_code,region) AS median_psf,
   PERCENTILE_CONT(psf, 0.25) OVER (PARTITION BY viz_group_code, region) AS p25_psf,
-  PERCENTILE_CONT(psf, 0.75) OVER (PARTITION BY viz_group_code, region) AS p75_psf
+  PERCENTILE_CONT(psf, 0.75) OVER (PARTITION BY viz_group_code, region) AS p75_psf,
+  PERCENTILE_CONT(price, 0.5) OVER (PARTITION BY viz_group_code,region) AS median_q,
+  PERCENTILE_CONT(price, 0.25) OVER (PARTITION BY viz_group_code, region) AS p25_q,
+  PERCENTILE_CONT(price, 0.75) OVER (PARTITION BY viz_group_code, region) AS p75_q
   FROM w_labels
   WHERE partition_ts = '{partition_date}'
 ),
@@ -194,6 +198,9 @@ r_metrics AS (
   MAX(median_psf) AS median_psf, 
   MAX(p25_psf) AS p25_psf,
   MAX(p75_psf) AS p75_psf,
+  MAX(median_q) AS median_q, 
+  MAX(p25_q) AS p25_q,
+  MAX(p75_q) AS p75_q
   FROM r_metrics_tmp
   GROUP BY viz_group_code, region
 ),
@@ -237,7 +244,10 @@ metrics_tmp AS (
   SELECT viz_group_code, id, 
   PERCENTILE_CONT(psf, 0.5) OVER (PARTITION BY viz_group_code) AS median_psf,
   PERCENTILE_CONT(psf, 0.25) OVER (PARTITION BY viz_group_code) AS p25_psf,
-  PERCENTILE_CONT(psf, 0.75) OVER (PARTITION BY viz_group_code) AS p75_psf
+  PERCENTILE_CONT(psf, 0.75) OVER (PARTITION BY viz_group_code) AS p75_psf,
+  PERCENTILE_CONT(price, 0.5) OVER (PARTITION BY viz_group_code) AS median_q,
+  PERCENTILE_CONT(price, 0.25) OVER (PARTITION BY viz_group_code) AS p25_q,
+  PERCENTILE_CONT(price, 0.75) OVER (PARTITION BY viz_group_code) AS p75_q
   FROM w_labels
   WHERE partition_ts = '{partition_date}'
 ),
@@ -250,6 +260,9 @@ metrics AS (
   MAX(median_psf) AS median_psf, 
   MAX(p25_psf) AS p25_psf,
   MAX(p75_psf) AS p75_psf,
+  MAX(median_q) AS median_q, 
+  MAX(p25_q) AS p25_q,
+  MAX(p75_q) AS p75_q
   FROM metrics_tmp
   GROUP BY viz_group_code
 ),

@@ -1,4 +1,5 @@
 import datetime
+import json
 
 import altair as alt
 import backend_bq
@@ -6,22 +7,19 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-N_DAYS = 18
+N_DAYS = 21
 
 
-def load_data(is_all_region: bool) -> pd.DataFrame:
-    sql_format = backend_bq.SQL_BASIC_METRICS.format(N_DAYS=N_DAYS)
-    df_r = backend_bq.bq_execute_query(
-        sql_format,
-        dataset_id="pg_listings",
-        table_id="agg_viz_group",
-    )
-    if is_all_region:
-        df_r = df_r[df_r["region"] == "ALL"]
+
+def format_q(n):
+    if n >= 10_000_000:
+        return f"$ {n / 1_000_000:,.1f}".replace(",", ".") + "M"
+    elif n >= 1_000_000:
+        return f"$ {n / 1_000_000:,.2f}".replace(",", ".") + "M"
+    elif n >= 1_000:
+        return f"$ {int(n // 1_000)}K"
     else:
-        df_r = df_r[df_r["region"] != "ALL"]
-    return df_r
-
+        return str(n)
 
 def parse_df_row(row: pd.DataFrame) -> dict:
     if len(row) != 1:
@@ -29,26 +27,36 @@ def parse_df_row(row: pd.DataFrame) -> dict:
     row = row.iloc[0]
     row_d = {}
     row_d["description"] = row["description"].split(" | ")[1]
-    row_d["psf"] = f"${int(round(row['median_psf'])):,}"
+    row_d["q"] = format_q(row['median_q'])
+    row_d["q_delta"] = f"{round(row['q_pct_delta'] * 100, 1)}%"
+    row_d["q_h"] = row["median_q_history"].tolist()
+    row_d["psf"] = f"$ {int(round(row['median_psf'])):,}"
     row_d["psf_delta"] = f"{round(row['psf_pct_delta'] * 100, 1)}%"
     row_d["psf_h"] = row["median_psf_history"].tolist()
     row_d["listing"] = f"{row["listings"]:,}"
     row_d["listing_delta"] = f"{round(row["listings_pct_delta"] * 100, 1)}%"
     row_d["listing_h"] = row["listings_history"].tolist()
+    row_d["lifetime"] = f"{round(row["median_lifetime"])} day"
     return row_d
+
+
 
 def plot_column(col_d, c,n):
     c.markdown(f"**{col_d['description']}**")
     # LISTINGS
 
     if n == 0:
-        l_label = "Listings"
-        p_label = "Median PSF"    
+        l_label = "Active listings"
+        p_label = "Median PSF"
+        q_label = "Median Quantum"    
     else:
         l_label = ""
         p_label = ""
+        q_label = ""
     #LISTING
-    c.metric(l_label, col_d["listing"], col_d["listing_delta"])
+    c.markdown(f"{col_d['listing']} listings   \n:grey[{col_d['lifetime']} lifetime]")
+    # Q
+    c.metric(q_label, col_d["q"], col_d["q_delta"])
     # PSF
     c.metric(p_label, col_d["psf"], col_d["psf_delta"])
     data_psf = pd.DataFrame.from_dict(col_d["psf_h"], orient="columns")
@@ -125,10 +133,7 @@ def plot_column(col_d, c,n):
     # # Render the listing chart
     # st.altair_chart(chart_listing, use_container_width=True)
 
-df_r = load_data(is_all_region=True)
-partition_date = df_r["dt"].max()
 
-print(partition_date)
 
 
 st.set_page_config(page_title="Market Overview", page_icon="📈")
@@ -149,77 +154,107 @@ st.markdown(
 
 # Intro
 st.markdown("# Market Overview")
-st.sidebar.header("Market Overviewo")
+st.sidebar.header("Market Overview")
 st.write(
     """This page shows the median PSF, number of listings, and median lifetime of listings for each category of property."""
 )
 
-# Create the HDB container
-with st.container():
-    st.markdown("## HDB")
+SEGMENT = st.radio(
+    f"Property Type",
+    ["HDB", "Non-Landed", "Landed"],
+    captions=[
+        "Resale flats",
+        "Condominium, Apartments, ECs",
+        "Terrace, Semi-Detached, Detached, Bungalows",
+    ], horizontal = True
+)
+
+b1, b2 = st.columns(2)
+
+with b1:
+    n_weeks = st.select_slider(
+    "Past weeks",
+    options=[n for n in range(1,4)])
+    N_DAYS = n_weeks * 7
 
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c_config = [
-        {"code": "AH2", "st_c": c1},
-        {"code": "AH3", "st_c": c2},
-        {"code": "AH4", "st_c": c3},
-        {"code": "AH5", "st_c": c4},
-        {"code": "AH0", "st_c": c5},
-    ]
-    for n, c_d in enumerate(c_config):
-        c = c_d["st_c"]
-        code = c_d["code"]
-        print(code)
-        print(df_r)
-        df_c = df_r[df_r["viz_group_code"] == code]
-        col_d = parse_df_row(df_c)
-        print(col_d)
-        with c:
-            plot_column(col_d, c, n)
-
-# Create the NL container
-with st.container():
-    st.markdown("## Non-Landed")
 
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c_config = [
-        {"code": "AN1", "st_c": c1},
-        {"code": "AN2", "st_c": c2},
-        {"code": "AN3", "st_c": c3},
-        {"code": "AN4", "st_c": c4},
-        {"code": "AN5", "st_c": c5},
-    ]
-    for n, c_d in enumerate(c_config):
-        c = c_d["st_c"]
-        code = c_d["code"]
-        print(code)
-        print(df_r)
-        df_c = df_r[df_r["viz_group_code"] == code]
-        col_d = parse_df_row(df_c)
-        print(col_d)
-        with c:
-            plot_column(col_d, c,n )
+df_r = backend_bq.load_data(N_DAYS,is_all_region=True)
+partition_date = df_r["dt"].max()
 
-# Create the NL container
-with st.container():
-    st.markdown("## Landed")
+# print(partition_date)
+
+match SEGMENT:
+    case "HDB":
+        # Create the HDB container
+        with st.container():
+            st.markdown("## HDB")
 
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c_config = [
-        {"code": "AL1", "st_c": c1},
-        {"code": "AL2", "st_c": c2},
-        {"code": "AL3", "st_c": c3},
-    ]
-    for n, c_d in enumerate(c_config):
-        c = c_d["st_c"]
-        code = c_d["code"]
-        print(code)
-        print(df_r)
-        df_c = df_r[df_r["viz_group_code"] == code]
-        col_d = parse_df_row(df_c)
-        print(col_d)
-        with c:
-            plot_column(col_d, c, n)
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c_config = [
+                {"code": "AH2", "st_c": c1},
+                {"code": "AH3", "st_c": c2},
+                {"code": "AH4", "st_c": c3},
+                {"code": "AH5", "st_c": c4},
+                {"code": "AH0", "st_c": c5},
+            ]
+            for n, c_d in enumerate(c_config):
+                c = c_d["st_c"]
+                code = c_d["code"]
+                # print(code)
+                # print(df_r)
+                df_c = df_r[df_r["viz_group_code"] == code]
+                col_d = parse_df_row(df_c)
+                # print(col_d)
+                with c:
+                    plot_column(col_d, c, n)
+
+    case "Non-Landed":
+        # Create the NL container
+        with st.container():
+            st.markdown("## Non-Landed")
+
+
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c_config = [
+                {"code": "AN1", "st_c": c1},
+                {"code": "AN2", "st_c": c2},
+                {"code": "AN3", "st_c": c3},
+                {"code": "AN4", "st_c": c4},
+                {"code": "AN5", "st_c": c5},
+            ]
+            for n, c_d in enumerate(c_config):
+                c = c_d["st_c"]
+                code = c_d["code"]
+                # print(code)
+                # print(df_r)
+                df_c = df_r[df_r["viz_group_code"] == code]
+                col_d = parse_df_row(df_c)
+                # print(col_d)
+                with c:
+                    plot_column(col_d, c,n )
+
+    case "Landed":
+        # Create the NL container
+        with st.container():
+            st.markdown("## Landed")
+
+
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c_config = [
+                {"code": "AL1", "st_c": c1},
+                {"code": "AL2", "st_c": c2},
+                {"code": "AL3", "st_c": c3},
+            ]
+            for n, c_d in enumerate(c_config):
+                c = c_d["st_c"]
+                code = c_d["code"]
+                # print(code)
+                # print(df_r)
+                df_c = df_r[df_r["viz_group_code"] == code]
+                col_d = parse_df_row(df_c)
+                # print(col_d)
+                with c:
+                    plot_column(col_d, c, n)

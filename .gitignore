@@ -1,4 +1,5 @@
 *.zip
+!dashboard_app.zip
 *.html
 *.txt
 *.parquet
