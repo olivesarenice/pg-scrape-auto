@@ -1,5 +1,5 @@
 *.zip
-*.csv
+!dashboard_app.zip
 *.html
 *.txt
 *.parquet
@@ -8,3 +8,11 @@ __pycache__/
 #pyautogui_imgs/
 .env/*
 log/*
+*.log
+.terraform/
+.env
+.terraform.lock.hcl
+gcp_sa.json
+creds/*
+df_concat.csv
+.DS_Store

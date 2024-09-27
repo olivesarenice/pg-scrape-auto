@@ -1,0 +1,9 @@
+{
+    "files": [
+        "./data/init/2024-09-24_7.parquet",
+        "./data/init/2024-09-24_14.parquet",
+        "./data/init/2024-09-24_21.parquet",
+        "./data/init/2024-09-24_28.parquet"
+    ],
+    "dt": "2024-09-24"
+}
