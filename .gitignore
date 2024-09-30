@@ -16,3 +16,4 @@ gcp_sa.json
 creds/*
 df_concat.csv
 .DS_Store
+*.har
