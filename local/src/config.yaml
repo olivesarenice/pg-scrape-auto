@@ -2,7 +2,7 @@ job_name: "pg-scrape-auto-local"
 mode: "full"
 log_level: "DEBUG"
 local_log_dir: "logs"
-path_to_chrome: "C:/Program Files/Google/Chrome/Application/chrome.exe"
+path_to_chrome: "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"
 aws:
   region: "us-east-1"
 scraper:

@@ -10,10 +10,11 @@ import zipfile
 import boto3
 import requests
 import urllib3
-import utils
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from bs4 import BeautifulSoup
 from loguru import logger
+
+import utils
 
 # Configurations
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -92,14 +93,14 @@ def get_pages(headers, filter_url_params, pg_endpoint):
         soup = BeautifulSoup(r.text, "html.parser")
         #print(r.text)
         # Find all elements with class 'pagination'
-        pagination_elements = soup.find_all(class_="pagination")
+        pagination_elements = soup.find_all(class_="page-link")
         # Extract numbers from the 'pagination' elements and find the maximum value
-        #print(pagination_elements)
+        print(pagination_elements)
+        from bs4 import Tag
         numbers = [
-            int(link.get("data-page", 0))
+            int(element.text.strip())  # Extracts the text and converts it to an integer
             for element in pagination_elements
-            for link in element.find_all("a")
-            if link.get("data-page").isdigit()
+            if isinstance(element, Tag) and element.name == "a" and element.get("title", "").startswith("Page")  and element.text.strip().isdigit()# Filters <a> tags with "Page" in the title
         ]
 
         if numbers:
@@ -115,7 +116,8 @@ def truncate_html(response):
     html = response.content
     # print(response.content)
     # Keep only the var guruApp and the 20 listings per html page
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "html.parser") 
+    return soup.prettify()
     summary_data = soup.find("script", text=lambda x: x and "var guruApp" in x)
     main_body = soup.find(id="listings-container")
 
@@ -134,7 +136,7 @@ def process_item(item):
     url = item["url"]
     # print(url)
     s1 = time.time()
-    time.sleep(1 * random.random())
+    time.sleep(0.5 * random.random())
     s2 = time.time()
     g1 = time.time()
     response = requests.get(url, headers=headers, verify=False)

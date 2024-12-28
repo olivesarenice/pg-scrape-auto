@@ -1,5 +1,5 @@
 *.zip
-*.csv
+!dashboard_app.zip
 *.html
 *.txt
 *.parquet
@@ -12,5 +12,9 @@ log/*
 .terraform/
 .env
 .terraform.lock.hcl
+gcp_sa.json
+creds/*
+df_concat.csv
+.DS_Store
+*.har
 
-*.png
