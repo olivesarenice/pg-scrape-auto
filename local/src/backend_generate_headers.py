@@ -150,7 +150,7 @@ def main(cmd_arg, config):
         pyautogui.press("down")
         sleep(0.3)
         pyautogui.press("enter")
-        sleep(0.3)
+        sleep(2.4)
 
     else:
         logger.error("Export button not found.")
