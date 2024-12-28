@@ -1,7 +1,7 @@
 @echo off
 
 echo cd to pg-scrape-auto
-cd C:\Users\Oliver\Projects\pg-scrape-auto\local
+cd C:\Users\olive\Desktop\Projects\pg-scrape-auto\local
 
 echo activate conda
 call conda activate pg-scrape-auto

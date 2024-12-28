@@ -12,3 +12,5 @@ log/*
 .terraform/
 .env
 .terraform.lock.hcl
+
+*.png
