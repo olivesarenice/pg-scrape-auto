@@ -93,7 +93,7 @@ def main(cmd_arg, config):
     print("Pause 10 seconds")
     sleep(10)  # Wait until captcha is done
     print("continue")
-    solve_captcha(config["pyautogui"]["img_captcha_box"])  # Click on captcha naturally
+    # solve_captcha(config["pyautogui"]["img_captcha_box"])  # Click on captcha naturally
 
     sleep(10)  # Wait for captcha to verify
 
