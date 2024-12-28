@@ -133,11 +133,24 @@ def main(cmd_arg, config):
     # Export HAR
     export_location = pyautogui.locateOnScreen(config["pyautogui"]["img_export"])
     if export_location:
-        pyautogui.click(
-            export_location.left + export_location.width / 2,
-            export_location.top + export_location.height / 2,
-        )
-        sleep(5)
+        # Calculate the center position of the element (same as before)
+        x = export_location.left + export_location.width / 2
+        y = export_location.top + export_location.height / 2
+
+        # Move the mouse to the calculated position (optional, but good practice)
+        pyautogui.moveTo(x, y)
+
+        # Click and hold for 1 second
+        pyautogui.mouseDown(x, y)  # Hold the mouse button down
+        sleep(1)  # Hold for 1 second
+        pyautogui.mouseUp(x, y)  # Release the mouse button
+
+        pyautogui.press("down")
+        sleep(0.3)
+        pyautogui.press("down")
+        sleep(0.3)
+        pyautogui.press("enter")
+        sleep(0.3)
 
     else:
         logger.error("Export button not found.")
