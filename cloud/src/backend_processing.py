@@ -9,16 +9,49 @@ import boto3
 import pandas as pd
 import tqdm
 import transforms_config
+import util_alert
 from bs4 import BeautifulSoup
 from loguru import logger
-import util_alert
 
-def parse_summary(html):
+
+def get_search_type(search_config):
+    match search_config:
+        case "HDB-1-2RM":
+            return ["1R", "2A", "2I", "2S"]
+        case "HDB-3RM":
+            return ["3A", "3NG", "3Am", "3NGm", "3I", "3Im", "3S", "3STD", "3PA"]
+        case "HDB-4RM":
+            return ["4A", "4NG", "4PA", "4S", "4I", "4STD"]
+        case "HDB-5RM":
+            return ["5PA", "5I", "5A", "5S"]
+        case "HDB-EX":
+            return ["TE", "MG", "EA", "EM", "6J"]
+        case "NON-LANDED-ALL":
+            return ["CONDO", "APT", "WALK", "CLUS", "EXCON"]
+        case "LANDED-ALL":
+            return [
+                "TERRA",
+                "DETAC",
+                "SEMI",
+                "CORN",
+                "LBUNG",
+                "BUNG",
+                "SHOPH",
+                "RLAND",
+                "TOWN",
+                "CON",
+                "LCLUS",
+            ]
+        case _:
+            return []
+
+
+def parse_summary(html, search_config):
 
     summary_str = str(html)
 
-    pattern = re.compile(r"var guruApp = ({.*?});", re.DOTALL)
-
+    # pattern = re.compile(r"var guruApp = ({.*?});", re.DOTALL)
+    pattern = re.compile(r"guruApp.listingResultsWidget = ({.*?});", re.DOTALL)
     match = pattern.search(summary_str)
 
     if match:
@@ -26,8 +59,12 @@ def parse_summary(html):
         json_str = match.group(1)
 
         # Convert the JSON string to a Python dictionary
+        json_str = json_str.replace("'gaECListings'", '"gaECListings"')
         guruapp_dict = json.loads(json_str)
-        summary_listings = guruapp_dict["listingResultsWidget"]["gaECListings"]
+        print(guruapp_dict)
+        # summary_listings = guruapp_dict["listingResultsWidget"]["gaECListings"]
+
+        summary_listings = guruapp_dict["gaECListings"]
         # print(summary_listings)
 
         # Do custom unpacking
@@ -60,9 +97,7 @@ def parse_summary(html):
         raw_df = pd.DataFrame.from_dict(flat_data)
 
         # Grab the search metadata:
-        search_type = guruapp_dict["listingSearch"]["searchParams"][
-            "property_type_code"
-        ]
+        search_type = get_search_type(search_config)
         search_type_val = ",".join(search_type)
         raw_df["search_type"] = search_type_val
         return raw_df
@@ -139,10 +174,14 @@ def process_file(html_fp):
     with open(html_fp, "r", encoding="utf-8") as file_data:
         html = file_data.read()
 
+    search_config = html_fp.split("/")[-1].split("_")[0]
+
     soup = BeautifulSoup(html, "html.parser")
 
-    summary_data = soup.find("script", string=lambda x: x and "var guruApp" in x)
-    summary_df = parse_summary(summary_data)
+    summary_data = soup.find(
+        "script", string=lambda x: x and "guruApp.listingResultsWidget" in x
+    )
+    summary_df = parse_summary(summary_data, search_config)
     details_data = soup.find(id="listings-container")
     details_df = parse_details(details_data)
     # print(summary_df.dtypes)
@@ -160,12 +199,13 @@ def process_file(html_fp):
     # joined_df.to_csv(f"tmp/data/tmp/{file_name}_joined.csv", index=False)
     return joined_df
 
+
 def download_htmls(bucket_name, s3_prefix, dest_dir):
     s3_client = boto3.client("s3")
 
     # List objects in the specified S3 prefix
     response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=s3_prefix)
-    
+
     if "Contents" not in response:
         raise ValueError("No files found with the given prefix.")
 
@@ -177,7 +217,7 @@ def download_htmls(bucket_name, s3_prefix, dest_dir):
             os.remove(file_path)
             n_removed += 1
     logger.info(f"Emptied {n_removed} files from {dest_dir}")
-    
+
     # Saving files
     file_paths = []
     logger.info("Unzipping files")
@@ -222,7 +262,9 @@ def format_dataframe(
         df.rename(columns=rename_schema, inplace=True)
 
     # Handle custom formatting separately
-    convert_schema_int_string = [k for k, v in convert_schema.items() if v == "int_string"]
+    convert_schema_int_string = [
+        k for k, v in convert_schema.items() if v == "int_string"
+    ]
     convert_schema_regular = {
         k: v for k, v in convert_schema.items() if v != "int_string"
     }
@@ -242,7 +284,7 @@ def format_dataframe(
     df2 = df1.astype(convert_schema_regular)
 
     for c in convert_schema_int_string:
-        df2[c] = df2[c].astype('Int64').astype('str')
+        df2[c] = df2[c].astype("Int64").astype("str")
 
     # If we have more columns than specified, remove them
     df2 = df2[[c for c in df2.columns if c in convert_schema.keys()]]
@@ -290,25 +332,26 @@ def retrieve_transform_config(
     transform_config = getattr(transforms_config, f"{table_name}_config")
     return transform_config
 
+
 from google.cloud import storage
 
 
 def upload_to_gcs(blob_name, path_to_file, bucket_name, creds_fp):
-    """ Upload data to a bucket"""
-     
+    """Upload data to a bucket"""
+
     # Explicitly use service account credentials by specifying the private key
     # file.
-    storage_client = storage.Client.from_service_account_json(
-        creds_fp)
+    storage_client = storage.Client.from_service_account_json(creds_fp)
 
-    #print(buckets = list(storage_client.list_buckets())
+    # print(buckets = list(storage_client.list_buckets())
 
     bucket = storage_client.get_bucket(bucket_name)
     blob = bucket.blob(blob_name)
     blob.upload_from_filename(path_to_file)
-    
-    #returns a public url
+
+    # returns a public url
     return blob.public_url
+
 
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
@@ -316,14 +359,13 @@ from google.cloud import bigquery
 
 def delete_bq_partition(dataset_id, table_id, partition_date, creds_fp):
     # Initialize a BigQuery client
-    client = bigquery.Client.from_service_account_json(
-    creds_fp)
+    client = bigquery.Client.from_service_account_json(creds_fp)
     try:
         client.get_table(f"{dataset_id}.{table_id}")
     except NotFound:
         logger.warning("Table does not exist")
         return False
-    
+
     query = f"""
     SELECT COUNT(*) as row_count FROM `{dataset_id}.{table_id}`
     WHERE partition_ts = '{partition_date}'
@@ -348,10 +390,11 @@ def delete_bq_partition(dataset_id, table_id, partition_date, creds_fp):
 
     logger.info(f"Deleted rows for {partition_date} from {dataset_id}.{table_id}")
 
+
 def load_bq_schema(schema_map, pk):
     schema = []
     for field_name, field_type in schema_map.items():
-        field_type = schema_map.get(field_name) 
+        field_type = schema_map.get(field_name)
         if field_name in pk:
             mode = "REQUIRED"
         else:
@@ -360,26 +403,23 @@ def load_bq_schema(schema_map, pk):
     logger.debug(schema)
     return schema
 
-def copy_gcs_to_bq(table_id, uri, schema,creds_fp):
-    client = bigquery.Client.from_service_account_json(
-    creds_fp)
-    #table_id = 'your_project.your_dataset.your_table'
-    #uri = 'gs://your-bucket-name/file.parquet'
+
+def copy_gcs_to_bq(table_id, uri, schema, creds_fp):
+    client = bigquery.Client.from_service_account_json(creds_fp)
+    # table_id = 'your_project.your_dataset.your_table'
+    # uri = 'gs://your-bucket-name/file.parquet'
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.PARQUET,
         schema=schema,
         write_disposition="WRITE_APPEND",
     )
 
-    load_job = client.load_table_from_uri(
-        uri,
-        table_id,
-        job_config=job_config
-    )
+    load_job = client.load_table_from_uri(uri, table_id, job_config=job_config)
 
     load_job.result()  # Waits for the job to complete.
 
     logger.info(f"Loaded {load_job.output_rows} rows into {table_id}.")
+
 
 def run(cmd_arg, config):
 
@@ -387,7 +427,7 @@ def run(cmd_arg, config):
         absolute_path = ""
     else:
         absolute_path = "/"
-    
+
     bucket_name = config["s3_bucket"]
     y = config["ymdh"]["y"]
     m = config["ymdh"]["m"]
@@ -399,18 +439,22 @@ def run(cmd_arg, config):
     logger.info(f"Raw data from: {s3_prefix}")
     if not cmd_arg.no_download:
         logger.info("Re-downloading HTMLs")
-        try: 
+        try:
             download_htmls(bucket_name, s3_prefix, f"{absolute_path}tmp/data/htmls")
         except Exception as e:
             logger.error(e)
-            util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.download', partition_date, 'ERROR' ,e)
+            util_alert.send_telegram(
+                f'{config["job"]}.{cmd_arg.step}.download', partition_date, "ERROR", e
+            )
             exit(1)
     file_paths = get_file_paths_matching(f"{absolute_path}tmp/data/htmls", ".html")
     df_fp = f"{absolute_path}tmp/data/raw/raw_df.parquet"
     if not cmd_arg.no_recompile:
         logger.info("Re-compiling HTMLs into single file")
         df_concat = run_process_listings(file_paths)
-        df_concat['partition_ts'] = datetime.datetime.strptime(partition_date, "%Y-%m-%d")
+        df_concat["partition_ts"] = datetime.datetime.strptime(
+            partition_date, "%Y-%m-%d"
+        )
         df_concat.to_parquet(df_fp, index=False)
     else:
         logger.info("Reading from existing compiled file")
@@ -422,7 +466,9 @@ def run(cmd_arg, config):
         df_transform = run_transform_df(df_concat, transform_config)
     except Exception as e:
         logger.error(e)
-        util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.transform_df', partition_date, 'ERROR' ,e)
+        util_alert.send_telegram(
+            f'{config["job"]}.{cmd_arg.step}.transform_df', partition_date, "ERROR", e
+        )
         exit(1)
     parquet_fp = f"{absolute_path}tmp/data/transformed/df_concat.parquet"
     df_transform.to_parquet(parquet_fp, index=False)
@@ -435,7 +481,9 @@ def run(cmd_arg, config):
         s3_client.upload_file(parquet_fp, bucket_name, s3_key)
     except Exception as e:
         logger.error(e)
-        util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.upload', partition_date, 'ERROR' ,e)
+        util_alert.send_telegram(
+            f'{config["job"]}.{cmd_arg.step}.upload', partition_date, "ERROR", e
+        )
         exit(1)
     logger.info(f"File uploaded successfully to s3://{bucket_name}/{s3_key}")
 
@@ -445,32 +493,51 @@ def run(cmd_arg, config):
     public_s3_bucket = config["public_s3_bucket"]
     public_s3_key = config["public_s3_key"]
     try:
-        s3_client.upload_file(csv_fp, public_s3_bucket, f"{public_s3_key}/latest_daily.csv")
+        s3_client.upload_file(
+            csv_fp, public_s3_bucket, f"{public_s3_key}/latest_daily.csv"
+        )
     except Exception as e:
         logger.error(e)
-        util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.upload', partition_date, 'ERROR' ,e)
-    logger.info(f"File uploaded successfully to s3://{public_s3_bucket}/{public_s3_key}")
+        util_alert.send_telegram(
+            f'{config["job"]}.{cmd_arg.step}.upload', partition_date, "ERROR", e
+        )
+    logger.info(
+        f"File uploaded successfully to s3://{public_s3_bucket}/{public_s3_key}"
+    )
     # Push to BigQuery
-    
-    
-    # Need to create BQ dataset, GCS bucket, and Service Account for GCS + BQ, download gcs_credentials.json 
+
+    # Need to create BQ dataset, GCS bucket, and Service Account for GCS + BQ, download gcs_credentials.json
     ## First need to upload to a tmp/ folder in GCS
     try:
-        upload_to_gcs(blob_name = s3_key,path_to_file=parquet_fp,bucket_name=config["gcs_bucket"],creds_fp = config["gcs_sa_creds"],)
+        upload_to_gcs(
+            blob_name=s3_key,
+            path_to_file=parquet_fp,
+            bucket_name=config["gcs_bucket"],
+            creds_fp=config["gcs_sa_creds"],
+        )
 
-        bq_schema = load_bq_schema(transform_config.dest_bq, transform_config.primary_key)
+        bq_schema = load_bq_schema(
+            transform_config.dest_bq, transform_config.primary_key
+        )
 
-        dataset = 'pg_listings'
-        table = 'listings_raw'
-        
-        delete_bq_partition(dataset, table, partition_date, creds_fp = config["gcs_sa_creds"])
-        copy_gcs_to_bq(table_id = "propguru.pg_listings.listings_raw", uri = f"gs://{config["gcs_bucket"]}/{s3_key}", schema = bq_schema, creds_fp = config["gcs_sa_creds"])
+        dataset = "pg_listings"
+        table = "listings_raw"
+
+        delete_bq_partition(
+            dataset, table, partition_date, creds_fp=config["gcs_sa_creds"]
+        )
+        copy_gcs_to_bq(
+            table_id="propguru.pg_listings.listings_raw",
+            uri=f"gs://{config["gcs_bucket"]}/{s3_key}",
+            schema=bq_schema,
+            creds_fp=config["gcs_sa_creds"],
+        )
     except Exception as e:
         logger.error(e)
-        util_alert.send_telegram(f'{config["job"]}.{cmd_arg.step}.bq', partition_date, 'ERROR' ,e)
+        util_alert.send_telegram(
+            f'{config["job"]}.{cmd_arg.step}.bq', partition_date, "ERROR", e
+        )
         exit(1)
     ## Then call a function to copy over to BQ
 
-
     # gcs_bucket = 'pg-scrape-auto-tmp'
-
