@@ -10,11 +10,10 @@ import zipfile
 import boto3
 import requests
 import urllib3
+import utils
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from bs4 import BeautifulSoup
 from loguru import logger
-
-import utils
 
 # Configurations
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -42,6 +41,7 @@ def delete_files_in_directory(directory_path):
     else:
         logger.error(f"Directory not found: {directory_path}")
 
+
 def get_headers(path_to_har, bot_trigger_url):
     global config
     with open(path_to_har, "r", encoding="utf8") as har:
@@ -65,6 +65,14 @@ def get_headers(path_to_har, bot_trigger_url):
     for header in headers_raw:
         if header["name"] not in exclude_headers:
             headers[header["name"]] = header["value"]
+
+    header_extra = [
+        {"name": "x-ajax-search", "value": "true"},
+        {"name": "x-map-search", "value": "true"},
+        {"name": "x-requested-with", "value": "XMLHttpRequest"},
+    ]
+    for header in header_extra:
+        headers[header["name"]] = header["value"]
     return headers
 
 
@@ -86,21 +94,22 @@ def get_pages(headers, filter_url_params, pg_endpoint):
         headers=headers,
         verify=False,
     )
-    r.encoding='utf-8'
+    r.encoding = "utf-8"
     if r.status_code == 200:
 
         # Parse the HTML content using BeautifulSoup
         soup = BeautifulSoup(r.text, "html.parser")
-        #print(r.text)
-        # Find all elements with class 'pagination'
-        pagination_elements = soup.find_all(class_="page-link")
+        print(soup)
+
+        # For old UI
+        pagination_elements = soup.find_all(class_="pagination")
         # Extract numbers from the 'pagination' elements and find the maximum value
-        print(pagination_elements)
-        from bs4 import Tag
+        # print(pagination_elements)
         numbers = [
-            int(element.text.strip())  # Extracts the text and converts it to an integer
+            int(link.get("data-page", 0))
             for element in pagination_elements
-            if isinstance(element, Tag) and element.name == "a" and element.get("title", "").startswith("Page")  and element.text.strip().isdigit()# Filters <a> tags with "Page" in the title
+            for link in element.find_all("a")
+            if link.get("data-page").isdigit()
         ]
 
         if numbers:
@@ -116,9 +125,12 @@ def truncate_html(response):
     html = response.content
     # print(response.content)
     # Keep only the var guruApp and the 20 listings per html page
-    soup = BeautifulSoup(html, "html.parser") 
-    return soup.prettify()
-    summary_data = soup.find("script", text=lambda x: x and "var guruApp" in x)
+    soup = BeautifulSoup(html, "html.parser")
+    # return soup.prettify()
+    summary_data = soup.find(
+        "script", text=lambda x: x and "guruApp.listingResultsWidget" in x
+    )
+
     main_body = soup.find(id="listings-container")
 
     # Create a new html
@@ -152,8 +164,10 @@ def process_item(item):
         file.write(truncate_html(response))
         # file.write(response.text)
     w2 = time.time()
-    if page %10 == 0:
-        logger.debug(f'{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s')
+    if page % 10 == 0:
+        logger.debug(
+            f"{name}_{page} | SLEEP: {(s2 -s1) :.4f}s |GET: {(g2 -g1) :.4f}s | WRITE: {(w2 -w1) :.4f}s"
+        )
     return html_file_path
 
 
@@ -187,15 +201,16 @@ def parallel_process(items, num_workers):
 #         file.write(f"Pages: {TOTAL_PAGES} \n")
 #         file.write(f"Total Size (MB): {get_directory_size(dirpath,filter_url_name)}\n")
 
+
 def create_zip_file(list_of_file_paths, zip_file_path):
     """Create a zip file containing the specified files.
-    
+
     Args:
         list_of_file_paths (list of str): List of file paths to be zipped.
         zip_file_path (str): Path where the zip file will be saved.
     """
     os.makedirs(os.path.dirname(zip_file_path), exist_ok=True)
-    with zipfile.ZipFile(zip_file_path, 'w') as zipf:
+    with zipfile.ZipFile(zip_file_path, "w") as zipf:
         for file_path in list_of_file_paths:
             if os.path.isfile(file_path):
                 zipf.write(file_path, os.path.basename(file_path))
@@ -205,7 +220,7 @@ def create_zip_file(list_of_file_paths, zip_file_path):
 
 def upload_to_s3(zip_file_path, bucket_name, s3_key, region_name):
     """Upload a file to an S3 bucket.
-    
+
     Args:
         zip_file_path (str): Path to the file to be uploaded.
         bucket_name (str): Name of the S3 bucket.
@@ -214,18 +229,18 @@ def upload_to_s3(zip_file_path, bucket_name, s3_key, region_name):
         aws_secret_access_key (str, optional): AWS secret access key.
         region_name (str, optional): AWS region name.
     """
-    
-    aws_access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
-    aws_secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
-    print(region_name,aws_access_key_id, aws_secret_access_key)
-    
+
+    aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+    aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    print(region_name, aws_access_key_id, aws_secret_access_key)
+
     s3_client = boto3.client(
-        's3',
+        "s3",
         region_name=region_name,
         aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key
+        aws_secret_access_key=aws_secret_access_key,
     )
-    
+
     try:
         s3_client.upload_file(zip_file_path, bucket_name, s3_key)
         print(f"File uploaded successfully to s3://{bucket_name}/{s3_key}")
@@ -233,6 +248,7 @@ def upload_to_s3(zip_file_path, bucket_name, s3_key, region_name):
         print(f"Credentials error: {e}")
     except Exception as e:
         print(f"An error occurred: {e}")
+
 
 def scrape(cmd_arg, config):
     ymdh = config["ymdh"]
@@ -255,15 +271,18 @@ def scrape(cmd_arg, config):
         if filter_config["enabled"]:
             filter_name = filter_config["name"]
             filter_params = filter_config["params"]
-            TOTAL_PAGES = get_pages(headers, filter_params, config["scraper"]["pg_endpoint"])
+            TOTAL_PAGES = get_pages(
+                headers, filter_params, config["scraper"]["pg_endpoint"]
+            )
             if config["mode"] == "test":
                 if TOTAL_PAGES > 25:
                     TOTAL_PAGES = 25
 
             base_url = config["scraper"]["pg_endpoint"]
             url_list = [
-                {   "config" : config,
-                    "headers" : headers,
+                {
+                    "config": config,
+                    "headers": headers,
                     "name": filter_name,
                     "page": i,
                     "url": f"{base_url}{i}?{filter_params}/",
@@ -272,26 +291,29 @@ def scrape(cmd_arg, config):
             ]
 
             # Perform parallel processing
-            html_file_paths = parallel_process(
-                url_list, cmd_arg.n_workers
-            ) 
+            html_file_paths = parallel_process(url_list, cmd_arg.n_workers)
             all_file_paths.extend(html_file_paths)
     logger.info("Scrape complete.")
     return None
- 
+
 
 def upload(cmd_args, config):
     ymdh = config["ymdh"]
-    all_file_paths = utils.get_file_paths_matching(f"{config['data']['html_dir']}", ".html")
-       
+    all_file_paths = utils.get_file_paths_matching(
+        f"{config['data']['html_dir']}", ".html"
+    )
+
     zip_fp = f"data/02_zipped/{ymdh["y"]}/{ymdh["m"]}/{ymdh["d"]}/htmls.zip"
     create_zip_file(all_file_paths, zip_fp)
 
-    partition_key = f"02_zipped/{ymdh["y"]}/{ymdh["m"]}/{ymdh["d"]}/htmls.zip" 
-    upload_to_s3(zip_fp, config["upload"]["s3_bucket"], partition_key, config["aws"]["region"])
-    
+    partition_key = f"02_zipped/{ymdh["y"]}/{ymdh["m"]}/{ymdh["d"]}/htmls.zip"
+    upload_to_s3(
+        zip_fp, config["upload"]["s3_bucket"], partition_key, config["aws"]["region"]
+    )
+
     logger.info(f"Uploaded {zip_fp} as {partition_key}.")
     return None
+
 
 if __name__ == "__main__":
     pass
