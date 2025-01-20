@@ -10,8 +10,8 @@ WORKDIR /var/task
 RUN pip install poetry
 
 # Copy the poetry configuration files and install dependencies
-COPY pyproject.toml poetry.lock* ./
-RUN poetry config virtualenvs.create false && poetry install --no-dev
+COPY pyproject.toml  ./
+RUN poetry config virtualenvs.create false && poetry install
 
 # Copy the Lambda function code into the container
 COPY cloud/src ./
