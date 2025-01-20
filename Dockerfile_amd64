@@ -11,7 +11,7 @@ RUN pip install poetry
 
 # Copy the poetry configuration files and install dependencies
 COPY pyproject.toml  ./
-RUN poetry config virtualenvs.create false && poetry install
+RUN poetry config virtualenvs.create false && poetry install --no-root
 
 # Copy the Lambda function code into the container
 COPY cloud/src ./

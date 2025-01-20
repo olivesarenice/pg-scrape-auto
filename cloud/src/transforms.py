@@ -124,11 +124,11 @@ def form_property_type(
             return "Landed", category
         else:
             hdb_mapping = {
-                "1R,2A,2I,2S": "1/2 ROOM HDB",
-                "3A,3NG,3Am,3NGm,3I,3Im,3S,3STD,3PA": "3 ROOM HDB",
-                "4A,4NG,4PA,4S,4I,4STD": "4 ROOM HDB",
-                "5PA,5I,5A,5S": "5 ROOM HDB",
-                "TE,MG,EA,EM,6J": "OTHER HDB",
+                "1": "1/2 ROOM HDB",
+                "3": "3 ROOM HDB",
+                "4": "4 ROOM HDB",
+                "5": "5 ROOM HDB",
+                "T": "OTHER HDB",
             }
             p_type = hdb_mapping.get(search_type[0], None)
             return "HDB", p_type
