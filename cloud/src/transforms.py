@@ -116,19 +116,19 @@ def form_property_type(
     """
 
     def assign_type(category, search_type):
-        if search_type == "APT,CLUS,CONDO,EXCON,WALK":
+        if search_type == "CONDO,APT,WALK,CLUS,EXCON":
             return "Non-Landed", category
         elif (
-            search_type == "BUNG,CON,CORN,DETAC,LBUNG,LCLUS,RLAND,SEMI,SHOPH,TERRA,TOWN"
+            search_type == "TERRA,DETAC,SEMI,CORN,LBUNG,BUNG,SHOPH,RLAND,TOWN,CON,LCLUS"
         ):
             return "Landed", category
         else:
             hdb_mapping = {
-                "1": "1/2 ROOM HDB",
-                "3": "3 ROOM HDB",
-                "4": "4 ROOM HDB",
-                "5": "5 ROOM HDB",
-                "6": "OTHER HDB",
+                "1R,2A,2I,2S": "1/2 ROOM HDB",
+                "3A,3NG,3Am,3NGm,3I,3Im,3S,3STD,3PA": "3 ROOM HDB",
+                "4A,4NG,4PA,4S,4I,4STD": "4 ROOM HDB",
+                "5PA,5I,5A,5S": "5 ROOM HDB",
+                "TE,MG,EA,EM,6J": "OTHER HDB",
             }
             p_type = hdb_mapping.get(search_type[0], None)
             return "HDB", p_type

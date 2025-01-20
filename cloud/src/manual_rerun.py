@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -53,7 +54,7 @@ def find_empty_dates(bucket_name, target_prefix, start, end):
 
             # Check if the object key starts with the target prefix
             if obj["Key"].startswith(target_prefix) and obj["Key"].endswith(
-                "df.parquet"
+                ".zip"  # "df.parquet"
             ):
                 # Extract the date part from the file path, e.g., "02_zipped/2024/12/28/htmls.zip"
                 parts = obj["Key"].split("/")
@@ -74,11 +75,13 @@ def find_empty_dates(bucket_name, target_prefix, start, end):
 
 # Example usage:
 bucket_name = "pg-scrape-auto"  # Replace with your actual bucket name
-target_prefix = "03_transformed"  # The specific prefix/folder you're interested in
-start = "2024-09-02"  # Set how many days back to check
-end = "2024-12-15"
+target_prefix = (
+    "02_zipped"  # "03_transformed"  # The specific prefix/folder you're interested in
+)
+start = "2024-12-28"  # Set how many days back to check
+end = "2025-01-20"
 lambda_fn = "pg-scrape-auto-lambda"
-backfill = True
+backfill = False
 # Get empty dates
 empty_dates = find_empty_dates(bucket_name, target_prefix, start, end)
 
@@ -105,6 +108,7 @@ if empty_dates:
                 InvocationType="Event",  # Asynchronous invocation
                 Payload=json.dumps(payload),
             )
+            time.sleep(10)
 
 
 else:
